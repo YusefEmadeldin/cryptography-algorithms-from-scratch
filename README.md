@@ -15,14 +15,14 @@ An interactive web application for exploring and visualizing cryptographic algor
 | **Public-Key Encryption** | ElGamal | Encryption scheme based on the Discrete Logarithm Problem |
 | **Public-Key Cryptography** | ECC | Elliptic Curve key generation, point addition & scalar multiplication |
 
-- 🧮 **Step-by-step visualization** — see intermediate values, round details, and final output for every operation.
-- ⚡ **Interactive UI** — enter inputs and get instant results through a sleek dark-mode interface.
-- 🔁 **Presets** — pre-configured parameter sets for ElGamal and ECC to get started quickly.
-- ✅ **Bcrypt verify** — hash a password *and* verify it against an existing hash.
+-  **Step-by-step visualization** — see intermediate values, round details, and final output for every operation.
+-  **Interactive UI** — enter inputs and get instant results through a sleek dark-mode interface.
+-  **Presets** — pre-configured parameter sets for ElGamal and ECC to get started quickly.
+-  **Bcrypt verify** — hash a password *and* verify it against an existing hash.
 
 ---
 
-## 📁 Project Structure
+##  Project Structure
 
 ```
 cryptography project/
@@ -45,7 +45,7 @@ cryptography project/
 
 ---
 
-## 🚀 Getting Started
+##  Getting Started
 
 ### Prerequisites
 
@@ -122,7 +122,7 @@ All endpoints accept **POST** requests with JSON bodies and return JSON response
 
 ---
 
-## 🧠 Algorithm Details
+##  Algorithm Details
 
 ### MD5 (RFC 1321)
 Pads the message to 512-bit blocks, initializes four 32-bit registers (A-D), and processes each block through **4 rounds × 16 operations** using auxiliary functions F, G, H, I with pre-computed sine-table constants.
@@ -144,20 +144,9 @@ Operates on the curve `y² = x³ + ax + b (mod p)`. Supports point addition, dou
 
 ---
 
-## 🛠️ Tech Stack
+##  Tech Stack
 
 - **Backend:** Python 3 / Flask
 - **Frontend:** HTML, CSS, JavaScript (vanilla)
 - **Crypto:** All algorithms implemented from scratch — zero external cryptography dependencies
 
----
-
-## ⚠️ Disclaimer
-
-> This project is built for **educational purposes only**. The implementations are designed to demonstrate how these algorithms work internally and should **not** be used in production systems. For real-world cryptography, use established libraries such as `cryptography`, `hashlib`, or `bcrypt`.
-
----
-
-## 📄 License
-
-This project was created as a university coursework assignment.
