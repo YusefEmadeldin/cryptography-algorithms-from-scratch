@@ -1,10 +1,10 @@
-# 🔐 CryptoLab
+#  CryptoLab
 
 An interactive web application for exploring and visualizing cryptographic algorithms, built with **Python (Flask)**. Each algorithm is implemented **from scratch** — no external crypto libraries — and includes step-by-step breakdowns to illustrate how the computations work internally.
 
 ---
 
-## ✨ Features
+##  Features
 
 | Category | Algorithm | Description |
 |---|---|---|
@@ -86,7 +86,7 @@ cryptography project/
 
 ---
 
-## 🔌 API Endpoints
+##  API Endpoints
 
 All endpoints accept **POST** requests with JSON bodies and return JSON responses.
 
