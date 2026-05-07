@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Cryptography & System Security — Interactive implementations of MD5, SHA-1, SHA-256, Bcrypt, ElGamal, and ECC algorithms.">
+    <title>CryptoLab — Cryptography & System Security</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+    <button class="menu-toggle" id="menu-toggle">☰</button>
+    <div class="app-layout">
+        <!-- SIDEBAR -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-logo"><h1>🔐 CryptoLab</h1><p>System Security Project</p></div>
+            <ul class="nav-list">
+                <li class="nav-item"><a class="nav-link active" data-section="home"><span class="nav-icon">🏠</span> Home</a></li>
+                <li class="nav-item"><a class="nav-link" data-section="md5"><span class="nav-icon">#️⃣</span> MD5 <span class="nav-badge">128-bit</span></a></li>
+                <li class="nav-item"><a class="nav-link" data-section="sha1"><span class="nav-icon">🔑</span> SHA-1 <span class="nav-badge">160-bit</span></a></li>
+                <li class="nav-item"><a class="nav-link" data-section="sha256"><span class="nav-icon">🛡️</span> SHA-256 <span class="nav-badge">256-bit</span></a></li>
+                <li class="nav-item"><a class="nav-link" data-section="bcrypt"><span class="nav-icon">🔒</span> Bcrypt <span class="nav-badge">KDF</span></a></li>
+                <li class="nav-item"><a class="nav-link" data-section="elgamal"><span class="nav-icon">📡</span> ElGamal <span class="nav-badge">Asym</span></a></li>
+                <li class="nav-item"><a class="nav-link" data-section="ecc"><span class="nav-icon">📐</span> ECC <span class="nav-badge">Curve</span></a></li>
+            </ul>
+        </aside>
+
+        <!-- MAIN -->
+        <main class="main-content">
+            <!-- HOME -->
+            <div class="section active" id="section-home">
+                <div class="hero">
+                    <h2>Cryptography &<br>System Security</h2>
+                    <p>Interactive implementations of fundamental cryptographic algorithms. Explore hashing, key derivation, and public-key cryptography.</p>
+                </div>
+                <div class="algo-grid">
+                    <div class="algo-card" onclick="switchSection('md5')"><span class="card-icon">#️⃣</span><h3>MD5</h3><p>128-bit hash. 4 rounds × 16 ops. Fast but collision-vulnerable.</p></div>
+                    <div class="algo-card" onclick="switchSection('sha1')"><span class="card-icon">🔑</span><h3>SHA-1</h3><p>160-bit hash with 80 rounds. Deprecated for security.</p></div>
+                    <div class="algo-card" onclick="switchSection('sha256')"><span class="card-icon">🛡️</span><h3>SHA-256</h3><p>256-bit secure hash. 64 rounds with constants from cube roots.</p></div>
+                    <div class="algo-card" onclick="switchSection('bcrypt')"><span class="card-icon">🔒</span><h3>Bcrypt</h3><p>Adaptive password hashing. Blowfish-based KDF.</p></div>
+                    <div class="algo-card" onclick="switchSection('elgamal')"><span class="card-icon">📡</span><h3>ElGamal</h3><p>Asymmetric encryption based on discrete logarithm.</p></div>
+                    <div class="algo-card" onclick="switchSection('ecc')"><span class="card-icon">📐</span><h3>ECC</h3><p>Elliptic Curve Cryptography. Point operations over finite fields.</p></div>
+                </div>
+            </div>
+
+            <!-- MD5 -->
+            <div class="section" id="section-md5">
+                <div class="section-header">
+                    <h2>#️⃣ MD5 Hash</h2>
+                    <p class="subtitle">Message-Digest Algorithm 5 — 128-bit hash (RFC 1321)</p>
+                    <div class="badge-row"><span class="badge badge-hash">Hash Function</span><span class="badge badge-bits">128-bit</span><span class="badge badge-broken">⚠ Broken</span></div>
+                </div>
+                <div class="card">
+                    <div class="card-title">Interactive Demo</div>
+                    <div class="form-group"><label for="md5-input">Input Message</label><textarea id="md5-input" placeholder="Type a message...">Hello, World!</textarea></div>
+                    <button class="btn btn-primary" id="md5-btn">Compute MD5 Hash</button>
+                    <div class="form-group" style="margin-top:16px"><label>Hash Output (32 hex chars)</label><div class="output-display" id="md5-output">—</div></div>
+                </div>
+                <div class="card"><div class="card-title">Algorithm Steps</div><div class="steps-container" id="md5-steps"></div></div>
+                <div class="warning-box"><strong>⚠ Security Note:</strong> MD5 is cryptographically broken. Collisions can be generated in seconds. Still useful for non-security checksums.</div>
+                <div class="info-box"><strong>How it works:</strong> Pads message to 512-bit blocks, initializes four 32-bit registers (A, B, C, D), processes each block through 64 operations using logical functions F, G, H, I. Constants T[i] = floor(2³² × |sin(i+1)|).</div>
+            </div>
+
+            <!-- SHA-1 -->
+            <div class="section" id="section-sha1">
+                <div class="section-header">
+                    <h2>🔑 SHA-1 Hash</h2>
+                    <p class="subtitle">Secure Hash Algorithm 1 — 160-bit hash (FIPS 180-4)</p>
+                    <div class="badge-row"><span class="badge badge-hash">Hash Function</span><span class="badge badge-bits">160-bit</span><span class="badge badge-broken">⚠ Deprecated</span></div>
+                </div>
+                <div class="card">
+                    <div class="card-title">Interactive Demo</div>
+                    <div class="form-group"><label for="sha1-input">Input Message</label><textarea id="sha1-input" placeholder="Type a message...">Hello, World!</textarea></div>
+                    <button class="btn btn-primary" id="sha1-btn">Compute SHA-1 Hash</button>
+                    <div class="form-group" style="margin-top:16px"><label>Hash Output (40 hex chars)</label><div class="output-display" id="sha1-output">—</div></div>
+                </div>
+                <div class="card"><div class="card-title">Algorithm Steps</div><div class="steps-container" id="sha1-steps"></div></div>
+                <div class="info-box"><strong>How it works:</strong> Pads to 512 bits. Expands 16→80 words using ROTL1(W[t-3]⊕W[t-8]⊕W[t-14]⊕W[t-16]). 80 rounds with Ch, Parity, Maj functions.</div>
+            </div>
+
+            <!-- SHA-256 -->
+            <div class="section" id="section-sha256">
+                <div class="section-header">
+                    <h2>🛡️ SHA-256 Hash</h2>
+                    <p class="subtitle">Secure Hash Algorithm 256 — 256-bit hash (FIPS 180-4)</p>
+                    <div class="badge-row"><span class="badge badge-hash">Hash Function</span><span class="badge badge-bits">256-bit</span><span class="badge badge-secure">✓ Secure</span></div>
+                </div>
+                <div class="card">
+                    <div class="card-title">Interactive Demo</div>
+                    <div class="form-group"><label for="sha256-input">Input Message</label><textarea id="sha256-input" placeholder="Type a message...">Hello, World!</textarea></div>
+                    <button class="btn btn-primary" id="sha256-btn">Compute SHA-256 Hash</button>
+                    <div class="form-group" style="margin-top:16px"><label>Hash Output (64 hex chars)</label><div class="output-display" id="sha256-output">—</div></div>
+                </div>
+                <div class="card"><div class="card-title">Algorithm Steps</div><div class="steps-container" id="sha256-steps"></div></div>
+                <div class="info-box"><strong>How it works:</strong> H0-H7 from √primes. 64 round constants from ∛primes. Expands 16→64 words using σ₀, σ₁. Each round uses Σ₀, Σ₁, Ch, Maj.</div>
+            </div>
+
+            <!-- BCRYPT -->
+            <div class="section" id="section-bcrypt">
+                <div class="section-header">
+                    <h2>🔒 Bcrypt Hashing</h2>
+                    <p class="subtitle">Adaptive password hashing based on Blowfish (Provos & Mazières, 1999)</p>
+                    <div class="badge-row"><span class="badge badge-kdf">Key Derivation</span><span class="badge badge-secure">✓ Secure</span><span class="badge badge-bits">184-bit</span></div>
+                </div>
+                <div class="two-col">
+                    <div class="card">
+                        <div class="card-title">Hash a Password</div>
+                        <div class="form-group"><label for="bcrypt-password">Password</label><input type="password" id="bcrypt-password" placeholder="Enter password..." value="mySecretPass"></div>
+                        <div class="form-group"><label>Cost Factor: <span id="bcrypt-cost-display">10</span></label><input type="range" id="bcrypt-cost" min="4" max="16" value="10"></div>
+                        <button class="btn btn-primary" id="bcrypt-hash-btn">Hash Password</button>
+                        <div class="form-group" style="margin-top:16px"><label>Bcrypt Hash</label><div class="output-display" id="bcrypt-output">—</div></div>
+                        <div style="font-size:0.75rem;color:var(--text-muted);margin-top:4px">Time: <span id="bcrypt-time">—</span></div>
+                    </div>
+                    <div class="card">
+                        <div class="card-title">Verify a Password</div>
+                        <div class="form-group"><label for="bcrypt-verify-password">Password</label><input type="password" id="bcrypt-verify-password" placeholder="Enter password..."></div>
+                        <div class="form-group"><label for="bcrypt-verify-hash">Hash to Verify</label><input type="text" id="bcrypt-verify-hash" placeholder="$2b$10$..."></div>
+                        <button class="btn btn-secondary" id="bcrypt-verify-btn">Verify</button>
+                        <div id="bcrypt-verify-result" style="margin-top:16px"></div>
+                    </div>
+                </div>
+                <div class="card"><div class="card-title">Algorithm Steps</div><div class="steps-container" id="bcrypt-steps"></div></div>
+                <div class="info-box"><strong>How it works:</strong> Uses EksBlowfishSetup mixing password+salt into Blowfish state. Repeated 2^cost times. Then encrypts "OrpheanBeholderScryDoubt" 64 times.</div>
+            </div>
+
+            <!-- ELGAMAL -->
+            <div class="section" id="section-elgamal">
+                <div class="section-header">
+                    <h2>📡 ElGamal Cryptosystem</h2>
+                    <p class="subtitle">Public-key encryption based on the Discrete Logarithm Problem</p>
+                    <div class="badge-row"><span class="badge badge-asym">Asymmetric</span><span class="badge badge-secure">✓ Secure</span></div>
+                </div>
+                <div class="card">
+                    <div class="card-title">Key Generation</div>
+                    <div class="form-group"><label>Preset Parameters</label>
+                        <select id="elgamal-preset">{% for p in elg_presets %}<option value="{{ loop.index0 }}" data-q="{{ p.q }}" data-alpha="{{ p.alpha }}">{{ p.label }}</option>{% endfor %}</select>
+                    </div>
+                    <div class="two-col">
+                        <div class="form-group"><label for="elgamal-q">Prime q</label><input type="number" id="elgamal-q" value="23"></div>
+                        <div class="form-group"><label for="elgamal-alpha">Primitive Root α</label><input type="number" id="elgamal-alpha" value="5"></div>
+                    </div>
+                    <button class="btn btn-primary" id="elgamal-keygen-btn">Generate Keys</button>
+                    <div class="output-display" id="elgamal-keys-output" style="margin-top:16px">—</div>
+                    <div class="steps-container" id="elgamal-keygen-steps" style="margin-top:8px"></div>
+                </div>
+                <div class="two-col">
+                    <div class="card">
+                        <div class="card-title">Encrypt</div>
+                        <div class="form-group"><label for="elgamal-plaintext">Plaintext (number M)</label><input type="number" id="elgamal-plaintext" placeholder="0 to q-1"></div>
+                        <button class="btn btn-primary" id="elgamal-encrypt-btn">Encrypt</button>
+                        <div class="output-display" id="elgamal-cipher-output" style="margin-top:16px">—</div>
+                        <div class="steps-container" id="elgamal-encrypt-steps" style="margin-top:8px"></div>
+                    </div>
+                    <div class="card">
+                        <div class="card-title">Decrypt</div>
+                        <div class="two-col">
+                            <div class="form-group"><label for="elgamal-dec-c1">C1</label><input type="number" id="elgamal-dec-c1" placeholder="C1"></div>
+                            <div class="form-group"><label for="elgamal-dec-c2">C2</label><input type="number" id="elgamal-dec-c2" placeholder="C2"></div>
+                        </div>
+                        <button class="btn btn-primary" id="elgamal-decrypt-btn">Decrypt</button>
+                        <div class="output-display" id="elgamal-dec-output" style="margin-top:16px">—</div>
+                        <div class="steps-container" id="elgamal-decrypt-steps" style="margin-top:8px"></div>
+                    </div>
+                </div>
+                <div class="info-box"><strong>How it works:</strong> Choose large prime q, primitive root α. Private key x random; public key y=α^x mod q. Encrypt: random k, C1=α^k mod q, C2=M·y^k mod q. Decrypt: s=C1^x mod q, M=C2·s⁻¹ mod q.</div>
+            </div>
+
+            <!-- ECC -->
+            <div class="section" id="section-ecc">
+                <div class="section-header">
+                    <h2>📐 Elliptic Curve Cryptography</h2>
+                    <p class="subtitle">Public-key cryptography using elliptic curves over finite fields</p>
+                    <div class="badge-row"><span class="badge badge-asym">Asymmetric</span><span class="badge badge-secure">✓ Secure</span><span class="badge badge-bits">Efficient Keys</span></div>
+                </div>
+                <div class="card">
+                    <div class="card-title">Curve Parameters & Key Generation</div>
+                    <div class="form-group"><label>Preset Curves</label>
+                        <select id="ecc-preset">{% for p in ecc_presets %}<option value="{{ loop.index0 }}" data-a="{{ p.a }}" data-b="{{ p.b }}" data-p="{{ p.p }}" data-gx="{{ p.Gx }}" data-gy="{{ p.Gy }}">{{ p.label }}</option>{% endfor %}</select>
+                    </div>
+                    <div class="three-col">
+                        <div class="form-group"><label for="ecc-a">a</label><input type="number" id="ecc-a" value="2"></div>
+                        <div class="form-group"><label for="ecc-b">b</label><input type="number" id="ecc-b" value="3"></div>
+                        <div class="form-group"><label for="ecc-p">p (prime)</label><input type="number" id="ecc-p" value="97"></div>
+                    </div>
+                    <div class="two-col">
+                        <div class="form-group"><label for="ecc-gx">Generator G.x</label><input type="number" id="ecc-gx" value="3"></div>
+                        <div class="form-group"><label for="ecc-gy">Generator G.y</label><input type="number" id="ecc-gy" value="6"></div>
+                    </div>
+                    <button class="btn btn-primary" id="ecc-keygen-btn">Generate Keys & Draw Curve</button>
+                    <div class="output-display" id="ecc-keys-output" style="margin-top:16px">—</div>
+                    <div id="ecc-point-count"></div>
+                    <div class="steps-container" id="ecc-keygen-steps" style="margin-top:8px"></div>
+                </div>
+                <div class="two-col">
+                    <div class="card">
+                        <div class="card-title">Point Addition (P + Q)</div>
+                        <div class="two-col">
+                            <div>
+                                <div class="form-group"><label for="ecc-p1x">P.x</label><input type="number" id="ecc-p1x" placeholder="x₁"></div>
+                                <div class="form-group"><label for="ecc-p1y">P.y</label><input type="number" id="ecc-p1y" placeholder="y₁"></div>
+                            </div>
+                            <div>
+                                <div class="form-group"><label for="ecc-p2x">Q.x</label><input type="number" id="ecc-p2x" placeholder="x₂"></div>
+                                <div class="form-group"><label for="ecc-p2y">Q.y</label><input type="number" id="ecc-p2y" placeholder="y₂"></div>
+                            </div>
+                        </div>
+                        <button class="btn btn-secondary" id="ecc-add-btn">Compute P + Q</button>
+                        <div class="output-display" id="ecc-add-output" style="margin-top:12px">—</div>
+                    </div>
+                    <div class="card">
+                        <div class="card-title">Curve Visualization</div>
+                        <canvas id="ecc-canvas" width="400" height="400"></canvas>
+                    </div>
+                </div>
+                <div class="info-box"><strong>How it works:</strong> y²=x³+ax+b over F_p. Non-singular: 4a³+27b²≠0. Point addition via chord-and-tangent. Scalar multiplication via double-and-add. Private key d random; public key Q=d·G.</div>
+            </div>
+        </main>
+    </div>
+
+    <script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>
