@@ -255,40 +255,107 @@ document.getElementById('ecc-preset')?.addEventListener('change', function() {
     document.getElementById('ecc-p').value = opt.dataset.p;
     document.getElementById('ecc-gx').value = opt.dataset.gx;
     document.getElementById('ecc-gy').value = opt.dataset.gy;
+    if (opt.dataset.n && opt.dataset.n !== 'undefined') {
+        document.getElementById('ecc-n').value = opt.dataset.n;
+    } else {
+        document.getElementById('ecc-n').value = '';
+    }
 });
 
 document.getElementById('ecc-keygen-btn')?.addEventListener('click', async () => {
-    const a = parseInt(document.getElementById('ecc-a').value);
-    const b = parseInt(document.getElementById('ecc-b').value);
-    const p = parseInt(document.getElementById('ecc-p').value);
-    const gx = parseInt(document.getElementById('ecc-gx').value);
-    const gy = parseInt(document.getElementById('ecc-gy').value);
-    const r = await apiCall('/api/ecc/keygen', {a, b, p, gx, gy});
+    const a = document.getElementById('ecc-a').value;
+    const b = document.getElementById('ecc-b').value;
+    const p = document.getElementById('ecc-p').value;
+    const gx = document.getElementById('ecc-gx').value;
+    const gy = document.getElementById('ecc-gy').value;
+    const n = document.getElementById('ecc-n').value;
+    
+    const reqData = {a, b, p, gx, gy};
+    if (n) reqData.n = n;
+    
+    const r = await apiCall('/api/ecc/keygen', reqData);
     if (r.error) { setOutput('ecc-keys-output', 'Error: ' + r.error, true); return; }
     eccData = {a, b, p, gx, gy, ...r};
+    
+    const decDInput = document.getElementById('ecc-dec-d');
+    if (decDInput) decDInput.value = r.private_key;
+    
     document.getElementById('ecc-keys-output').innerHTML =
         `<div class="key-display">
             <div><span class="key-label">Curve:</span> y² = x³ + ${a}x + ${b} (mod ${p})</div>
-            <div><span class="key-label">Generator:</span> G = (${gx}, ${gy}), order = ${r.order}</div>
-            <div><span class="key-label">Private Key:</span> d = ${r.private_key}</div>
-            <div><span class="key-label">Public Key:</span> Q = (${r.public_key.x}, ${r.public_key.y})</div>
+            <div style="word-break: break-all;"><span class="key-label">Generator:</span> G = (${gx}, ${gy}), order = ${r.order}</div>
+            <div style="word-break: break-all;"><span class="key-label">Private Key:</span> d = ${r.private_key}</div>
+            <div style="word-break: break-all;"><span class="key-label">Public Key:</span> Q = (${r.public_key.x}, ${r.public_key.y})</div>
         </div>`;
     document.getElementById('ecc-keys-output').classList.add('has-value');
-    document.getElementById('ecc-point-count').textContent = `${r.point_count} points on curve (including ∞)`;
+    
+    if (r.point_count === 'Too many to compute') {
+        document.getElementById('ecc-point-count').textContent = `Order of G is ${r.order}. Curve is too large to list all points.`;
+        const canvas = document.getElementById('ecc-canvas');
+        if (canvas) {
+            const ctx = canvas.getContext('2d');
+            const w = canvas.width;
+            const h = canvas.height;
+            
+            ctx.clearRect(0, 0, w, h);
+            ctx.fillStyle = '#0f1729'; 
+            ctx.fillRect(0, 0, w, h);
+            
+            ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(0, h/2); ctx.lineTo(w, h/2);
+            ctx.moveTo(w/3, 0); ctx.lineTo(w/3, h);
+            ctx.stroke();
+
+            ctx.strokeStyle = '#3b82f6';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            let started = false;
+            for(let i = 0; i < w; i++) {
+                let x = (i - w/3) / 40;
+                let y2 = x*x*x - 2*x + 2;
+                if(y2 >= 0) {
+                    let y = Math.sqrt(y2) * 40;
+                    if(!started) { ctx.moveTo(i, h/2 - y); started = true; }
+                    else ctx.lineTo(i, h/2 - y);
+                }
+            }
+            for(let i = w; i >= 0; i--) {
+                let x = (i - w/3) / 40;
+                let y2 = x*x*x - 2*x + 2;
+                if(y2 >= 0) {
+                    let y = Math.sqrt(y2) * 40;
+                    ctx.lineTo(i, h/2 + y);
+                }
+            }
+            ctx.stroke();
+            
+            const drawPoint = (px, py, label, color) => {
+                ctx.beginPath();
+                ctx.arc(px, py, 6, 0, Math.PI*2);
+                ctx.fillStyle = color;
+                ctx.fill();
+                ctx.fillStyle = '#fff';
+                ctx.font = 'bold 12px Inter';
+                ctx.fillText(label, px + 10, py - 10);
+            };
+            
+            drawPoint(w/3 + 40, h/2 - 40, 'G (Generator)', '#10b981');
+            drawPoint(w/3 + 120, h/2 + 88, 'Q (Public Key)', '#f59e0b');
+            
+            ctx.fillStyle = '#94a3b8';
+            ctx.font = '12px Inter';
+            ctx.fillText('Conceptual continuous curve (Finite field points are too large to plot)', 10, h - 10);
+        }
+    } else {
+        document.getElementById('ecc-point-count').textContent = `${r.point_count} points on curve (including ∞)`;
+        drawCurve(r.points, parseInt(p), {x: parseInt(gx), y: parseInt(gy)}, r.public_key);
+    }
     renderSteps('ecc-keygen-steps', r.steps);
-    drawCurve(r.points, p, {x: gx, y: gy}, r.public_key);
 });
 
-document.getElementById('ecc-add-btn')?.addEventListener('click', async () => {
-    const a = parseInt(document.getElementById('ecc-a').value);
-    const p = parseInt(document.getElementById('ecc-p').value);
-    const p1x = parseInt(document.getElementById('ecc-p1x').value);
-    const p1y = parseInt(document.getElementById('ecc-p1y').value);
-    const p2x = parseInt(document.getElementById('ecc-p2x').value);
-    const p2y = parseInt(document.getElementById('ecc-p2y').value);
-    const r = await apiCall('/api/ecc/add', {a, p, p1x, p1y, p2x, p2y});
-    setOutput('ecc-add-output', `(${p1x},${p1y}) + (${p2x},${p2y}) = ${r.result}`);
-});
+
 
 // --- ECC Encrypt ---
 let eccCiphertext = null;
@@ -329,6 +396,9 @@ document.getElementById('ecc-encrypt-btn')?.addEventListener('click', async () =
 document.getElementById('ecc-decrypt-btn')?.addEventListener('click', async () => {
     if (!eccData) { alert('Generate keys first!'); return; }
     if (!eccCiphertext) { alert('Encrypt a message first!'); return; }
+    
+    const d = document.getElementById('ecc-dec-d').value;
+    if (!d) { alert('Enter private key d'); return; }
 
     const btn = document.getElementById('ecc-decrypt-btn');
     btn.disabled = true; btn.textContent = 'Decrypting...';
@@ -336,7 +406,7 @@ document.getElementById('ecc-decrypt-btn')?.addEventListener('click', async () =
     const r = await apiCall('/api/ecc/decrypt', {
         a: eccData.a, b: eccData.b, p: eccData.p,
         gx: eccData.gx, gy: eccData.gy,
-        d: eccData.private_key,
+        d: d,
         n: eccData.order,
         ciphertext: eccCiphertext
     });
@@ -350,6 +420,81 @@ document.getElementById('ecc-decrypt-btn')?.addEventListener('click', async () =
 
     setOutput('ecc-dec-output', r.plaintext);
     renderSteps('ecc-decrypt-steps', r.steps);
+});
+
+// --- ECC Sign ---
+document.getElementById('ecc-sign-btn')?.addEventListener('click', async () => {
+    if (!eccData) { alert('Generate keys first!'); return; }
+    const msg = document.getElementById('ecc-sign-message').value;
+    if (!msg) { alert('Enter message to sign'); return; }
+    
+    const d = document.getElementById('ecc-dec-d').value || eccData.private_key;
+
+    const btn = document.getElementById('ecc-sign-btn');
+    btn.disabled = true; btn.textContent = 'Signing...';
+
+    const r = await apiCall('/api/ecc/sign', {
+        a: eccData.a, b: eccData.b, p: eccData.p,
+        gx: eccData.gx, gy: eccData.gy,
+        d: d,
+        n: eccData.order,
+        message: msg
+    });
+
+    btn.disabled = false; btn.textContent = 'Sign';
+
+    if (r.error) {
+        setOutput('ecc-sign-output', 'Error: ' + r.error, true);
+        return;
+    }
+
+    document.getElementById('ecc-sign-output').innerHTML = `<div style="word-break:break-all"><span class="key-label">r:</span> ${r.r}</div><div style="word-break:break-all"><span class="key-label">s:</span> ${r.s}</div>`;
+    document.getElementById('ecc-sign-output').classList.add('has-value');
+    
+    // Auto-fill verify
+    document.getElementById('ecc-ver-message').value = msg;
+    document.getElementById('ecc-ver-r').value = r.r;
+    document.getElementById('ecc-ver-s').value = r.s;
+    
+    renderSteps('ecc-sign-steps', r.steps);
+});
+
+// --- ECC Verify ---
+document.getElementById('ecc-verify-btn')?.addEventListener('click', async () => {
+    if (!eccData) { alert('Generate keys first!'); return; }
+    const msg = document.getElementById('ecc-ver-message').value;
+    const signR = document.getElementById('ecc-ver-r').value;
+    const signS = document.getElementById('ecc-ver-s').value;
+    if (!msg || !signR || !signS) { alert('Fill all fields to verify'); return; }
+
+    const btn = document.getElementById('ecc-verify-btn');
+    btn.disabled = true; btn.textContent = 'Verifying...';
+
+    const r = await apiCall('/api/ecc/verify', {
+        a: eccData.a, b: eccData.b, p: eccData.p,
+        gx: eccData.gx, gy: eccData.gy,
+        qx: eccData.public_key.x, qy: eccData.public_key.y,
+        n: eccData.order,
+        message: msg,
+        r: signR,
+        s: signS
+    });
+
+    btn.disabled = false; btn.textContent = 'Verify Signature';
+
+    if (r.error) {
+        setOutput('ecc-ver-output', 'Error: ' + r.error, true);
+        return;
+    }
+
+    if (r.valid) {
+        setOutput('ecc-ver-output', '✅ Signature is VALID', false);
+        document.getElementById('ecc-ver-output').style.color = '#10b981';
+        document.getElementById('ecc-ver-output').style.borderColor = 'rgba(16, 185, 129, 0.3)';
+    } else {
+        setOutput('ecc-ver-output', '❌ Signature is INVALID', true);
+    }
+    renderSteps('ecc-verify-steps', r.steps);
 });
 
 // --- Canvas Drawing ---

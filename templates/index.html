@@ -234,17 +234,18 @@
                 <div class="card">
                     <div class="card-title">Curve Parameters & Key Generation</div>
                     <div class="form-group"><label>Preset Curves</label>
-                        <select id="ecc-preset">{% for p in ecc_presets %}<option value="{{ loop.index0 }}" data-a="{{ p.a }}" data-b="{{ p.b }}" data-p="{{ p.p }}" data-gx="{{ p.Gx }}" data-gy="{{ p.Gy }}">{{ p.label }}</option>{% endfor %}</select>
+                        <select id="ecc-preset">{% for p in ecc_presets %}<option value="{{ loop.index0 }}" data-a="{{ p.a }}" data-b="{{ p.b }}" data-p="{{ p.p }}" data-gx="{{ p.Gx }}" data-gy="{{ p.Gy }}" data-n="{{ p.n }}">{{ p.label }}</option>{% endfor %}</select>
                     </div>
                     <div class="three-col">
-                        <div class="form-group"><label for="ecc-a">a</label><input type="number" id="ecc-a" value="2"></div>
-                        <div class="form-group"><label for="ecc-b">b</label><input type="number" id="ecc-b" value="3"></div>
-                        <div class="form-group"><label for="ecc-p">p (prime)</label><input type="number" id="ecc-p" value="97"></div>
+                        <div class="form-group"><label for="ecc-a">a</label><input type="text" id="ecc-a" value="115792089210356248762697446949407573530086143415290314195533631308867097853948"></div>
+                        <div class="form-group"><label for="ecc-b">b</label><input type="text" id="ecc-b" value="41058363725152142129326129780047268409114441015993725554835256314039467401291"></div>
+                        <div class="form-group"><label for="ecc-p">p (prime)</label><input type="text" id="ecc-p" value="115792089210356248762697446949407573530086143415290314195533631308867097853951"></div>
                     </div>
                     <div class="two-col">
-                        <div class="form-group"><label for="ecc-gx">Generator G.x</label><input type="number" id="ecc-gx" value="3"></div>
-                        <div class="form-group"><label for="ecc-gy">Generator G.y</label><input type="number" id="ecc-gy" value="6"></div>
+                        <div class="form-group"><label for="ecc-gx">Generator G.x</label><input type="text" id="ecc-gx" value="48439561293906451759052585252797914202762949526041747995844080717082404635286"></div>
+                        <div class="form-group"><label for="ecc-gy">Generator G.y</label><input type="text" id="ecc-gy" value="36134250956749795798585127919587881956611106672985015071877198253568414405109"></div>
                     </div>
+                    <input type="hidden" id="ecc-n" value="115792089210356248762697446949407573529996955224135760342422259061068512044369">
                     <button class="btn btn-primary" id="ecc-keygen-btn">Generate Keys & Draw Curve</button>
                     <div class="output-display" id="ecc-keys-output" style="margin-top:16px">—</div>
                     <div id="ecc-point-count"></div>
@@ -261,6 +262,7 @@
                     <div class="card">
                         <div class="card-title">🔓 Decrypt Ciphertext</div>
                         <p style="font-size:0.8rem;color:var(--text-secondary);margin-bottom:12px">Uses the ciphertext from encryption and private key d to recover the original message.</p>
+                        <div class="form-group"><label for="ecc-dec-d">Private Key (d)</label><input type="text" id="ecc-dec-d" placeholder="Private key will populate here..."></div>
                         <button class="btn btn-primary" id="ecc-decrypt-btn">Decrypt</button>
                         <div class="form-group" style="margin-top:16px"><label>Decrypted Plaintext</label><div class="output-display" id="ecc-dec-output">—</div></div>
                         <div class="steps-container" id="ecc-decrypt-steps" style="margin-top:8px"></div>
@@ -268,24 +270,29 @@
                 </div>
                 <div class="two-col">
                     <div class="card">
-                        <div class="card-title">Point Addition (P + Q)</div>
-                        <div class="two-col">
-                            <div>
-                                <div class="form-group"><label for="ecc-p1x">P.x</label><input type="number" id="ecc-p1x" placeholder="x₁"></div>
-                                <div class="form-group"><label for="ecc-p1y">P.y</label><input type="number" id="ecc-p1y" placeholder="y₁"></div>
-                            </div>
-                            <div>
-                                <div class="form-group"><label for="ecc-p2x">Q.x</label><input type="number" id="ecc-p2x" placeholder="x₂"></div>
-                                <div class="form-group"><label for="ecc-p2y">Q.y</label><input type="number" id="ecc-p2y" placeholder="y₂"></div>
-                            </div>
-                        </div>
-                        <button class="btn btn-secondary" id="ecc-add-btn">Compute P + Q</button>
-                        <div class="output-display" id="ecc-add-output" style="margin-top:12px">—</div>
+                        <div class="card-title">✍️ Sign Message (ECDSA)</div>
+                        <p style="font-size:0.8rem;color:var(--text-secondary);margin-bottom:12px">Uses your private key d to create a digital signature.</p>
+                        <div class="form-group"><label for="ecc-sign-message">Message to Sign</label><textarea id="ecc-sign-message" placeholder="Type a message to sign..." style="min-height:60px">Hello</textarea></div>
+                        <button class="btn btn-primary" id="ecc-sign-btn">Sign</button>
+                        <div class="form-group" style="margin-top:16px"><label>Signature (r, s)</label><div class="output-display" id="ecc-sign-output">—</div></div>
+                        <div class="steps-container" id="ecc-sign-steps" style="margin-top:8px"></div>
                     </div>
                     <div class="card">
-                        <div class="card-title">Curve Visualization</div>
-                        <canvas id="ecc-canvas" width="400" height="400"></canvas>
+                        <div class="card-title">✅ Verify Signature (ECDSA)</div>
+                        <p style="font-size:0.8rem;color:var(--text-secondary);margin-bottom:12px">Uses the public key Q to verify the signature.</p>
+                        <div class="form-group"><label for="ecc-ver-message">Message</label><textarea id="ecc-ver-message" placeholder="Message to verify..." style="min-height:60px">Hello</textarea></div>
+                        <div class="two-col">
+                            <div class="form-group"><label for="ecc-ver-r">Signature r</label><input type="text" id="ecc-ver-r" placeholder="r"></div>
+                            <div class="form-group"><label for="ecc-ver-s">Signature s</label><input type="text" id="ecc-ver-s" placeholder="s"></div>
+                        </div>
+                        <button class="btn btn-primary" id="ecc-verify-btn">Verify Signature</button>
+                        <div class="output-display" id="ecc-ver-output" style="margin-top:16px">—</div>
+                        <div class="steps-container" id="ecc-verify-steps" style="margin-top:8px"></div>
                     </div>
+                </div>
+                <div class="card">
+                    <div class="card-title">Curve Visualization</div>
+                    <canvas id="ecc-canvas" width="400" height="400"></canvas>
                 </div>
                 <div class="info-box"><strong>How it works:</strong> y²=x³+ax+b over F_p. Non-singular: 4a³+27b²≠0. Point addition via chord-and-tangent. Scalar multiplication via double-and-add. Private key d random; public key Q=d·G. Encryption: each char m → M=m·G, ciphertext (k·G, M+k·Q). Decryption: M=C2−d·C1, recover m from lookup table.</div>
             </div>

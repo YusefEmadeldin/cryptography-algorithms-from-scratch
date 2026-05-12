@@ -9,6 +9,7 @@ Operations:
 - Key Generation: private key d, public key Q = d·G
 """
 import random
+import hashlib
 
 def _mod(a, m):
     return ((a % m) + m) % m
@@ -78,43 +79,71 @@ def find_all_points(a, b, p):
                 points.append({'x': x, 'y': y})
     return points
 
+import math
+
 def point_order(px, py, a, p):
     qx, qy = px, py
-    for i in range(1, p + 2):
+    # Hasse's Theorem: N <= p + 1 + 2*sqrt(p)
+    limit = p + 1 + 2 * int(math.sqrt(p)) + 2
+    for i in range(1, limit):
         if qx is None:
             return i
         qx, qy = point_add(qx, qy, px, py, a, p)
     return -1
 
 PRESETS = [
+    {
+        'label': 'secp256r1 (NIST P-256)', 
+        'a': '115792089210356248762697446949407573530086143415290314195533631308867097853948',
+        'b': '41058363725152142129326129780047268409114441015993725554835256314039467401291',
+        'p': '115792089210356248762697446949407573530086143415290314195533631308867097853951',
+        'Gx': '48439561293906451759052585252797914202762949526041747995844080717082404635286',
+        'Gy': '36134250956749795798585127919587881956611106672985015071877198253568414405109',
+        'n': '115792089210356248762697446949407573529996955224135760342422259061068512044369'
+    },
+    {
+        'label': 'secp256k1 (Bitcoin)',
+        'a': '0',
+        'b': '7',
+        'p': '115792089237316195423570985008687907853269984665640564039457584007908834671663',
+        'Gx': '55066263022277343669578718895168534326250603453777594175500187360389116729240',
+        'Gy': '32670510020758816978083085130507043184471273380659243275938904335757337482424',
+        'n': '115792089237316195423570985008687907852837564279074904382605163141518161494337'
+    },
     {'a': 2, 'b': 3, 'p': 97, 'Gx': 3, 'Gy': 6, 'label': 'y²=x³+2x+3 mod 97, G=(3,6)'},
     {'a': 1, 'b': 1, 'p': 23, 'Gx': 0, 'Gy': 1, 'label': 'y²=x³+x+1 mod 23, G=(0,1)'},
     {'a': 2, 'b': 2, 'p': 17, 'Gx': 5, 'Gy': 1, 'label': 'y²=x³+2x+2 mod 17, G=(5,1)'},
+    {'label': 'Invalid Curve 1 (Singular)', 'a': 0, 'b': 0, 'p': 97, 'Gx': 0, 'Gy': 0},
+    {'label': 'Invalid Curve 2 (G not on curve)', 'a': 2, 'b': 3, 'p': 97, 'Gx': 1, 'Gy': 1},
 ]
 
-def key_gen(a, b, p, gx, gy):
+def key_gen(a, b, p, gx, gy, n=None):
     steps = []
     if not is_non_singular(a, b, p):
-        return {'error': 'Curve is singular (4a³+27b²≡0)'}
+        return {'error': 'Unsupported Curve. (Curve is singular 4a³+27b²≡0)'}
     if not is_on_curve(gx, gy, a, b, p):
-        return {'error': 'Generator G is not on the curve'}
+        return {'error': 'Unsupported Curve. (Generator G is not on the curve)'}
 
-    n = point_order(gx, gy, a, p)
+    if n is None:
+        if p > 10000:
+            return {'error': 'p is too large to brute-force order n. Please provide n.'}
+        n = point_order(gx, gy, a, p)
+        
     d = random.randint(1, n - 1)
     qx, qy = scalar_mult(d, gx, gy, a, p)
 
     disc = _mod(4*a**3 + 27*b**2, p)
-    steps.append(f'Curve: y² = x³ + {a}x + {b} (mod {p})')
+    steps.append(f'Curve: y² = x³ + a·x + b (mod p)')
     steps.append(f'4a³ + 27b² mod p = {disc} ≠ 0 ✓')
     steps.append(f'Generator G = ({gx}, {gy})')
     steps.append(f'Order of G: n = {n}')
-    steps.append(f'Private key d = {d} (random, 1 ≤ d ≤ {n-1})')
-    steps.append(f'Public key Q = d·G = {d}·({gx},{gy}) = ({qx}, {qy})')
+    steps.append(f'Private key d (random, 1 ≤ d < n)')
+    steps.append(f'Public key Q = d·G = ({qx}, {qy})')
 
     return {
-        'private_key': d,
-        'public_key': {'x': qx, 'y': qy},
-        'order': n,
+        'private_key': str(d),
+        'public_key': {'x': str(qx), 'y': str(qy)},
+        'order': str(n),
         'steps': steps
     }
 
@@ -143,9 +172,8 @@ def ecc_encrypt(plaintext_str, a, b, p, gx, gy, qx, qy, n):
         return {'error': f'Character code {max_char} exceeds generator order n={n}. Use a larger curve (larger p).'}
 
     steps.append(f'Plaintext: "{plaintext_str}" ({len(plaintext_str)} chars)')
-    steps.append(f'Curve: y² = x³ + {a}x + {b} (mod {p}), G=({gx},{gy}), n={n}')
+    steps.append(f'Curve: y² = x³ + a·x + b (mod p)')
     steps.append(f'Public key Q = ({qx}, {qy})')
-    steps.append(f'Method: ElGamal ECC — encode char m as M=m·G, encrypt as (k·G, M+k·Q)')
 
     for i, ch in enumerate(plaintext_str):
         m = ord(ch)
@@ -163,12 +191,12 @@ def ecc_encrypt(plaintext_str, a, b, p, gx, gy, qx, qy, n):
         c2x, c2y = point_add(mx, my, kqx, kqy, a, p)
 
         ciphertext.append({
-            'C1': {'x': c1x, 'y': c1y},
-            'C2': {'x': c2x, 'y': c2y}
+            'C1': {'x': str(c1x), 'y': str(c1y)},
+            'C2': {'x': str(c2x), 'y': str(c2y)}
         })
 
         if i < 3:
-            steps.append(f'Char "{ch}" (m={m}): M={m}·G=({mx},{my}), k={k}, C1=k·G=({c1x},{c1y}), C2=M+k·Q=({c2x},{c2y})')
+            steps.append(f'Char "{ch}" (m={m}): M={m}·G, k={k}, C1=k·G, C2=M+k·Q')
 
     if len(plaintext_str) > 3:
         steps.append(f'... ({len(plaintext_str) - 3} more characters encrypted)')
@@ -190,12 +218,20 @@ def ecc_decrypt(ciphertext, a, b, p, gx, gy, d, n):
         return {'error': 'No ciphertext provided'}
 
     steps.append(f'Decrypting {len(ciphertext)} ciphertext pair(s)')
-    steps.append(f'Private key d = {d}')
     steps.append(f'Method: M = C2 − d·C1, then brute-force m where m·G = M')
 
     # Build lookup table: (x, y) -> m for m*G, covering all ASCII + extended
     lookup = {}
     limit = min(n, 65536)
+    
+    # Check if we should even build a massive lookup table
+    # If p is massive, doing 65536 point_adds might take ~1 sec in Python, which is fine for ASCII.
+    # We only really need ASCII printable chars (max 255) for this app realistically, but we do limit=65536.
+    # To make it snappy for large primes, let's limit it to 1000 for web demo purposes if n is massive,
+    # because a 65536 loop of big int math might be sluggish.
+    if p > 10000:
+        limit = min(n, 1200) # Covers standard ASCII + some
+
     cx, cy = gx, gy
     for m in range(1, limit):
         lookup[(cx, cy)] = m
@@ -204,10 +240,10 @@ def ecc_decrypt(ciphertext, a, b, p, gx, gy, d, n):
     steps.append(f'Built lookup table for m·G (m = 1..{limit - 1})')
 
     for i, ct in enumerate(ciphertext):
-        c1x = ct['C1']['x']
-        c1y = ct['C1']['y']
-        c2x = ct['C2']['x']
-        c2y = ct['C2']['y']
+        c1x = int(ct['C1']['x'])
+        c1y = int(ct['C1']['y'])
+        c2x = int(ct['C2']['x'])
+        c2y = int(ct['C2']['y'])
 
         # S = d * C1
         sx, sy = scalar_mult(d, c1x, c1y, a, p)
@@ -222,16 +258,99 @@ def ecc_decrypt(ciphertext, a, b, p, gx, gy, d, n):
         elif (mx, my) in lookup:
             m = lookup[(mx, my)]
         else:
-            m = ord('?')
+            # Point is not in our valid text lookup table.
+            # We cannot find the true 'm' because that requires solving the ECDLP!
+            # To visually simulate a "garbled" decryption failure for the user, 
+            # we derive a readable random ASCII character from the x-coordinate.
+            m = 32 + (mx % 95)  # Printable ASCII range 32-126
 
         plaintext += chr(m)
 
         if i < 3:
-            steps.append(f'Pair {i+1}: S=d·C1=({sx},{sy}), M=C2−S=({mx},{my}), m={m} → "{chr(m)}"')
+            steps.append(f'Pair {i+1}: S=d·C1, M=C2−S, m={m} → "{chr(m)}"')
 
     if len(ciphertext) > 3:
         steps.append(f'... ({len(ciphertext) - 3} more pairs decrypted)')
 
-    steps.append(f'✓ Decrypted plaintext: "{plaintext}"')
-
     return {'plaintext': plaintext, 'steps': steps}
+
+def ecc_sign(msg_str, a, b, p, gx, gy, d, n):
+    """
+    Sign a message using ECDSA (Elliptic Curve Digital Signature Algorithm).
+    """
+    steps = []
+    if not msg_str:
+        return {'error': 'Message cannot be empty'}
+    
+    # Calculate hash of message
+    msg_hash = hashlib.sha256(msg_str.encode('utf-8')).hexdigest()
+    z = int(msg_hash, 16)
+    steps.append(f'Message: "{msg_str}"')
+    steps.append(f'SHA-256 Hash (z): {z}')
+    
+    r = 0
+    s = 0
+    while r == 0 or s == 0:
+        k = random.randint(1, n - 1)
+        x1, y1 = scalar_mult(k, gx, gy, a, p)
+        r = _mod(x1, n)
+        if r == 0:
+            continue
+        k_inv = _mod_inverse(k, n)
+        s = _mod(k_inv * (z + r * d), n)
+        
+    steps.append(f'Random k chosen.')
+    steps.append(f'Point (x1, y1) = k·G')
+    steps.append(f'r = x1 mod n = {r}')
+    steps.append(f's = k⁻¹(z + r·d) mod n = {s}')
+    steps.append(f'Signature (r, s) generated.')
+    
+    return {'r': str(r), 's': str(s), 'steps': steps}
+
+def ecc_verify(msg_str, r_str, s_str, a, b, p, gx, gy, qx, qy, n):
+    """
+    Verify an ECDSA signature.
+    """
+    steps = []
+    try:
+        r = int(r_str)
+        s = int(s_str)
+    except ValueError:
+        return {'error': 'Invalid signature format'}
+        
+    if not (1 <= r < n) or not (1 <= s < n):
+        return {'valid': False, 'error': 'Signature (r, s) out of bounds', 'steps': steps}
+        
+    msg_hash = hashlib.sha256(msg_str.encode('utf-8')).hexdigest()
+    z = int(msg_hash, 16)
+    steps.append(f'Message: "{msg_str}"')
+    steps.append(f'SHA-256 Hash (z): {z}')
+    
+    w = _mod_inverse(s, n)
+    u1 = _mod(z * w, n)
+    u2 = _mod(r * w, n)
+    
+    steps.append(f'w = s⁻¹ mod n = {w}')
+    steps.append(f'u1 = z·w mod n = {u1}')
+    steps.append(f'u2 = r·w mod n = {u2}')
+    
+    # Compute u1*G + u2*Q
+    u1_x, u1_y = scalar_mult(u1, gx, gy, a, p)
+    u2_x, u2_y = scalar_mult(u2, qx, qy, a, p)
+    x1, y1 = point_add(u1_x, u1_y, u2_x, u2_y, a, p)
+    
+    if x1 is None:
+        steps.append(f'Point u1·G + u2·Q is at infinity. Invalid signature.')
+        return {'valid': False, 'steps': steps}
+        
+    v = _mod(x1, n)
+    steps.append(f'x1 = {x1}')
+    steps.append(f'v = x1 mod n = {v}')
+    
+    valid = (v == r)
+    if valid:
+        steps.append(f'✓ v == r ({v} == {r}). Signature is VALID.')
+    else:
+        steps.append(f'✗ v != r ({v} != {r}). Signature is INVALID.')
+        
+    return {'valid': valid, 'steps': steps}

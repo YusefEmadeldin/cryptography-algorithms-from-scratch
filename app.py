@@ -8,7 +8,7 @@ from crypto.sha1 import hash_sha1_with_steps, hash_sha1_bytes_with_steps
 from crypto.sha256 import hash_sha256_with_steps, hash_sha256_bytes_with_steps
 from crypto.bcrypt_hash import hash_password, verify_password
 from crypto.elgamal import key_gen as elgamal_keygen, encrypt as elgamal_encrypt, decrypt as elgamal_decrypt, sign as elgamal_sign, verify_signature as elgamal_verify, PRESETS as ELG_PRESETS
-from crypto.ecc import key_gen as ecc_keygen, point_add, find_all_points, ecc_encrypt, ecc_decrypt, PRESETS as ECC_PRESETS
+from crypto.ecc import key_gen as ecc_keygen, point_add, find_all_points, ecc_encrypt, ecc_decrypt, ecc_sign, ecc_verify, PRESETS as ECC_PRESETS
 
 app = Flask(__name__)
 
@@ -133,25 +133,21 @@ def api_ecc_keygen():
     p = int(request.json.get('p', 97))
     gx = int(request.json.get('gx', 3))
     gy = int(request.json.get('gy', 6))
-    result = ecc_keygen(a, b, p, gx, gy)
+    n_str = request.json.get('n')
+    n = int(n_str) if n_str else None
+    
+    result = ecc_keygen(a, b, p, gx, gy, n)
     if 'error' not in result:
-        pts = find_all_points(a, b, p)
-        result['points'] = pts
-        result['point_count'] = len(pts)
+        if p < 10000:
+            pts = find_all_points(a, b, p)
+            result['points'] = pts
+            result['point_count'] = len(pts)
+        else:
+            result['points'] = []
+            result['point_count'] = "Too many to compute"
     return jsonify(result)
 
-@app.route('/api/ecc/add', methods=['POST'])
-def api_ecc_add():
-    a = int(request.json.get('a', 2))
-    p = int(request.json.get('p', 97))
-    p1x = int(request.json.get('p1x', 0))
-    p1y = int(request.json.get('p1y', 0))
-    p2x = int(request.json.get('p2x', 0))
-    p2y = int(request.json.get('p2y', 0))
-    rx, ry = point_add(p1x, p1y, p2x, p2y, a, p)
-    if rx is None:
-        return jsonify({'result': 'Point at Infinity (O)', 'x': None, 'y': None})
-    return jsonify({'result': f'({rx}, {ry})', 'x': rx, 'y': ry})
+
 
 @app.route('/api/ecc/encrypt', methods=['POST'])
 def api_ecc_encrypt():
@@ -177,6 +173,33 @@ def api_ecc_decrypt():
     n = int(request.json.get('n', 100))
     ciphertext = request.json.get('ciphertext', [])
     return jsonify(ecc_decrypt(ciphertext, a, b, p, gx, gy, d, n))
+
+@app.route('/api/ecc/sign', methods=['POST'])
+def api_ecc_sign():
+    a = int(request.json.get('a', 2))
+    b = int(request.json.get('b', 3))
+    p = int(request.json.get('p', 97))
+    gx = int(request.json.get('gx', 3))
+    gy = int(request.json.get('gy', 6))
+    d = int(request.json.get('d', 1))
+    n = int(request.json.get('n', 100))
+    msg = request.json.get('message', '')
+    return jsonify(ecc_sign(msg, a, b, p, gx, gy, d, n))
+
+@app.route('/api/ecc/verify', methods=['POST'])
+def api_ecc_verify():
+    a = int(request.json.get('a', 2))
+    b = int(request.json.get('b', 3))
+    p = int(request.json.get('p', 97))
+    gx = int(request.json.get('gx', 3))
+    gy = int(request.json.get('gy', 6))
+    qx = int(request.json.get('qx', 0))
+    qy = int(request.json.get('qy', 0))
+    n = int(request.json.get('n', 100))
+    msg = request.json.get('message', '')
+    r = request.json.get('r', '0')
+    s = request.json.get('s', '0')
+    return jsonify(ecc_verify(msg, r, s, a, b, p, gx, gy, qx, qy, n))
 
 if __name__ == '__main__':
     app.run(debug=True, port=5000)
