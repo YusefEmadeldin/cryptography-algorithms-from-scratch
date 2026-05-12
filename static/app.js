@@ -27,8 +27,16 @@ function renderSteps(containerId, steps) {
 }
 
 async function apiCall(url, data) {
+    const nonce = Math.random().toString(36).substring(2) + Date.now().toString(36);
+    const timestamp = Date.now().toString();
     const res = await fetch(url, {
-        method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data)
+        method: 'POST', 
+        headers: {
+            'Content-Type': 'application/json',
+            'X-Nonce': nonce,
+            'X-Timestamp': timestamp
+        }, 
+        body: JSON.stringify(data)
     });
     return res.json();
 }
@@ -113,7 +121,16 @@ function setupFileUpload(prefix, apiUrl, stepsId) {
         try {
             const formData = new FormData();
             formData.append('file', file);
-            const res = await fetch(apiUrl, { method: 'POST', body: formData });
+            const nonce = Math.random().toString(36).substring(2) + Date.now().toString(36);
+            const timestamp = Date.now().toString();
+            const res = await fetch(apiUrl, { 
+                method: 'POST', 
+                headers: {
+                    'X-Nonce': nonce,
+                    'X-Timestamp': timestamp
+                },
+                body: formData 
+            });
             const r = await res.json();
             if (r.error) {
                 setOutput(`${prefix}-output`, 'Error: ' + r.error, true);

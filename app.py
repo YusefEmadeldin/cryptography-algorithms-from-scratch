@@ -3,6 +3,8 @@ CryptoLab — Flask Web Application
 Interactive implementations of MD5, SHA-1, SHA-256, Bcrypt, ElGamal, and ECC.
 """
 from flask import Flask, render_template, request, jsonify
+from werkzeug.exceptions import HTTPException
+import time
 from crypto.md5 import hash_md5_with_steps, hash_md5_bytes_with_steps
 from crypto.sha1 import hash_sha1_with_steps, hash_sha1_bytes_with_steps
 from crypto.sha256 import hash_sha256_with_steps, hash_sha256_bytes_with_steps
@@ -11,6 +13,42 @@ from crypto.elgamal import key_gen as elgamal_keygen, encrypt as elgamal_encrypt
 from crypto.ecc import key_gen as ecc_keygen, point_add, find_all_points, ecc_encrypt, ecc_decrypt, ecc_sign, ecc_verify, PRESETS as ECC_PRESETS
 
 app = Flask(__name__)
+
+# --- Replay Attack Prevention ---
+used_nonces = set()
+REPLAY_WINDOW_MS = 60000  # 60 seconds
+
+@app.before_request
+def check_replay_attack():
+    if request.method == 'POST' and request.path.startswith('/api/'):
+        nonce = request.headers.get('X-Nonce')
+        timestamp = request.headers.get('X-Timestamp')
+        
+        if not nonce or not timestamp:
+            return jsonify({'error': 'Missing Replay Protection Headers (X-Nonce, X-Timestamp)'}), 400
+            
+        try:
+            ts = int(timestamp)
+            current_time = int(time.time() * 1000)
+            if abs(current_time - ts) > REPLAY_WINDOW_MS:
+                return jsonify({'error': 'Request expired (Replay Attack Detected)'}), 400
+        except ValueError:
+            return jsonify({'error': 'Invalid timestamp'}), 400
+            
+        if nonce in used_nonces:
+            return jsonify({'error': 'Nonce already used (Replay Attack Detected)'}), 400
+            
+        used_nonces.add(nonce)
+
+# --- Graceful Error Handling (Null Input) ---
+@app.errorhandler(Exception)
+def handle_exception(e):
+    if isinstance(e, HTTPException):
+        return jsonify({'error': e.description}), e.code
+    # Catch TypeErrors (e.g. int(None)) and AttributeErrors (e.g. None.get) caused by null input
+    if isinstance(e, (TypeError, ValueError, AttributeError)):
+        return jsonify({'error': 'Invalid input data. Please ensure all fields are provided correctly.', 'details': str(e)}), 400
+    return jsonify({'error': 'Internal server error', 'details': str(e)}), 500
 
 @app.route('/')
 def index():
@@ -202,4 +240,10 @@ def api_ecc_verify():
     return jsonify(ecc_verify(msg, r, s, a, b, p, gx, gy, qx, qy, n))
 
 if __name__ == '__main__':
-    app.run(debug=True, port=5000)
+    try:
+        from waitress import serve
+        print("Running with Waitress for stable high concurrency...")
+        serve(app, host='0.0.0.0', port=5000, threads=100)
+    except ImportError:
+        print("Waitress not installed. Running default server.")
+        app.run(debug=True, port=5000)
