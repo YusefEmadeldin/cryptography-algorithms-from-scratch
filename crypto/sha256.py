@@ -118,15 +118,21 @@ def hash_sha256_with_steps(message):
         a, b, c, d, e, f, g, h = H
 
         for i in range(64):
+            # T1 combines the h register, Sigma1(e), Choice(e,f,g), Round Constant, and Word
             T1 = _mask(h + _sigma1(e) + _ch(e, f, g) + K[i] + W[i])
+            # T2 combines Sigma0(a) and Majority(a,b,c)
             T2 = _mask(_sigma0(a) + _maj(a, b, c))
+            
+            # Shift registers down
             h = g
             g = f
             f = e
+            # Add T1 to d to create new e
             e = _mask(d + T1)
             d = c
             c = b
             b = a
+            # New a is T1 + T2
             a = _mask(T1 + T2)
 
         H[0] = _mask(H[0] + a)

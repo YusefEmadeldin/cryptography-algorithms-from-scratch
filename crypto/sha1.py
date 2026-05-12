@@ -79,15 +79,19 @@ def hash_sha1_with_steps(message):
 
         for i in range(80):
             if i < 20:
+                # Round 1 (0-19): Ch function. f = (B AND C) OR ((NOT B) AND D)
                 f = _mask((b & c) | ((~b) & d))
                 k = 0x5A827999
             elif i < 40:
+                # Round 2 (20-39): Parity function. f = B XOR C XOR D
                 f = _mask(b ^ c ^ d)
                 k = 0x6ED9EBA1
             elif i < 60:
+                # Round 3 (40-59): Majority function. f = (B AND C) OR (B AND D) OR (C AND D)
                 f = _mask((b & c) | (b & d) | (c & d))
                 k = 0x8F1BBCDC
             else:
+                # Round 4 (60-79): Parity function. f = B XOR C XOR D
                 f = _mask(b ^ c ^ d)
                 k = 0xCA62C1D6
 

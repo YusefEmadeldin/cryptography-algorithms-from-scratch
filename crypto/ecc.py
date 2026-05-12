@@ -177,16 +177,16 @@ def ecc_encrypt(plaintext_str, a, b, p, gx, gy, qx, qy, n):
 
     for i, ch in enumerate(plaintext_str):
         m = ord(ch)
-        # M = m * G
+        # ECC Encryption Step 1: Encode character into a point M = m * G
         mx, my = scalar_mult(m, gx, gy, a, p)
 
-        # Random k
+        # ECC Encryption Step 2: Choose random scalar k
         k = random.randint(1, n - 1)
 
-        # C1 = k * G
+        # ECC Encryption Step 3: Compute Ephemeral Public Key C1 = k * G
         c1x, c1y = scalar_mult(k, gx, gy, a, p)
 
-        # C2 = M + k * Q
+        # ECC Encryption Step 4: Compute Shared Secret (k*Q) and Masked Message C2 = M + k * Q
         kqx, kqy = scalar_mult(k, qx, qy, a, p)
         c2x, c2y = point_add(mx, my, kqx, kqy, a, p)
 
@@ -245,10 +245,10 @@ def ecc_decrypt(ciphertext, a, b, p, gx, gy, d, n):
         c2x = int(ct['C2']['x'])
         c2y = int(ct['C2']['y'])
 
-        # S = d * C1
+        # ECC Decryption Step 1: Compute Shared Secret S = d * C1
         sx, sy = scalar_mult(d, c1x, c1y, a, p)
 
-        # M = C2 + (-S) = C2 - d·C1
+        # ECC Decryption Step 2: Recover point M = C2 - S = C2 + (-S)
         neg_sx, neg_sy = point_neg(sx, sy, p)
         mx, my = point_add(c2x, c2y, neg_sx, neg_sy, a, p)
 

@@ -98,11 +98,15 @@ def encrypt(plaintext_str, q, alpha, y):
         if M >= q:
             return {'error': f'Character "{ch}" (ASCII {M}) is >= q ({q})'}
         
+        # Encryption Step 1: Choose random k coprime to (q-1)
         k = random.randint(2, q - 2)
         while _gcd(k, q - 1) != 1:
             k = random.randint(2, q - 2)
 
+        # Encryption Step 2: Compute Ephemeral Key C1 = α^k mod q
         C1 = _mod_pow(alpha, k, q)
+        
+        # Encryption Step 3: Compute Masked Message C2 = M * y^k mod q
         C2 = (M * _mod_pow(y, k, q)) % q
         
         ciphertext.append({'C1': C1, 'C2': C2})
@@ -125,8 +129,14 @@ def decrypt(ciphertext, x, q):
     for i, pair in enumerate(ciphertext):
         C1 = pair.get('C1', 0)
         C2 = pair.get('C2', 0)
+        
+        # Decryption Step 1: Recover shared secret s = C1^x mod q
         s = _mod_pow(C1, x, q)
+        
+        # Decryption Step 2: Compute modular inverse of s (s^-1 mod q)
         s_inv = _mod_inverse(s, q)
+        
+        # Decryption Step 3: Recover Message M = C2 * s^-1 mod q
         M = (C2 * s_inv) % q
         
         # handle M safely

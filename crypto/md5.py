@@ -87,18 +87,22 @@ def hash_md5_with_steps(message):
 
         for i in range(64):
             if i < 16:
+                # Round 1: F(B, C, D) = (B & C) | (~B & D) - nonlinear function
                 F = (B & C) | ((~B) & D)
                 g = i
                 round_name = 'F'
             elif i < 32:
+                # Round 2: G(B, C, D) = (B & D) | (C & ~D)
                 F = (D & B) | ((~D) & C)
                 g = (5 * i + 1) % 16
                 round_name = 'G'
             elif i < 48:
+                # Round 3: H(B, C, D) = B ^ C ^ D (XOR parity)
                 F = B ^ C ^ D
                 g = (3 * i + 5) % 16
                 round_name = 'H'
             else:
+                # Round 4: I(B, C, D) = C ^ (B | ~D)
                 F = C ^ (B | (~D))
                 g = (7 * i) % 16
                 round_name = 'I'

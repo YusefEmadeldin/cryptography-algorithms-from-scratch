@@ -123,16 +123,19 @@ def hash_password(password, cost=10, salt_bytes=None):
 
     P = list(ORIG_P)
     S = [list(s) for s in ORIG_S]
+    
+    # Phase 1: Initialize the Blowfish P-array and S-boxes with salt and key (EksBlowfishSetup)
     _expand_key_salt(P, S, key, salt_bytes)
     steps.append('EksBlowfishSetup: Initial key expansion with salt')
 
+    # Phase 2: Key Stretching (The expensive part, 2^cost iterations)
     rounds = 2 ** cost
     for _ in range(rounds):
         _expand_key(P, S, key)
         _expand_key(P, S, salt_bytes)
     steps.append(f'Key stretching: {rounds} rounds of ExpandKey completed')
 
-    # Encrypt magic string 64 times
+    # Phase 3: Ciphertext generation (Encrypt magic string 64 times using modified Blowfish state)
     ct = [0] * 6
     for i in range(6):
         ct[i] = _u32((MAGIC[i*4]<<24)|(MAGIC[i*4+1]<<16)|(MAGIC[i*4+2]<<8)|MAGIC[i*4+3])
