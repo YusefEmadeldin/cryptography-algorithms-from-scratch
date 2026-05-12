@@ -182,6 +182,43 @@ select { cursor: pointer; appearance: none; background-image: url("data:image/sv
 /* === Canvas === */
 canvas { width: 100%; height: auto; border-radius: var(--radius-sm); background: #0f1729; display: block; }
 
+/* === File Upload === */
+.divider-or {
+    display: flex; align-items: center; gap: 12px; margin: 20px 0;
+    color: var(--text-muted); font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 1px;
+}
+.divider-or::before, .divider-or::after {
+    content: ''; flex: 1; height: 1px; background: var(--border);
+}
+
+.file-drop-zone {
+    border: 2px dashed var(--border); border-radius: var(--radius); padding: 28px 20px;
+    text-align: center; cursor: pointer; transition: all 0.3s ease; position: relative;
+}
+.file-drop-zone:hover, .file-drop-zone.drag-over {
+    border-color: var(--accent); background: rgba(99,102,241,0.05);
+}
+.file-drop-zone.drag-over {
+    box-shadow: 0 0 20px var(--accent-glow);
+}
+.file-input-hidden {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    opacity: 0; cursor: pointer;
+}
+.file-drop-content { pointer-events: none; }
+.file-icon { font-size: 2rem; display: block; margin-bottom: 8px; }
+.file-drop-content p { font-size: 0.85rem; color: var(--text-secondary); margin: 4px 0; }
+.file-browse { color: var(--accent); font-weight: 600; text-decoration: underline; }
+.file-hint { font-size: 0.75rem !important; color: var(--text-muted) !important; }
+.file-selected {
+    padding: 10px 14px; background: rgba(34,197,94,0.08); border: 1px solid rgba(34,197,94,0.25);
+    border-radius: var(--radius-sm); font-family: 'JetBrains Mono', monospace; font-size: 0.8rem;
+    color: var(--green); text-align: left;
+}
+
+.btn-secondary:disabled { opacity: 0.4; cursor: not-allowed; }
+.btn-secondary:disabled:hover { border-color: var(--border); }
+
 /* === Responsive === */
 @media (max-width: 768px) {
     .sidebar { transform: translateX(-100%); }

@@ -4,11 +4,11 @@ Interactive implementations of MD5, SHA-1, SHA-256, Bcrypt, ElGamal, and ECC.
 """
 from flask import Flask, render_template, request, jsonify
 from crypto.md5 import hash_md5_with_steps
-from crypto.sha1 import hash_sha1_with_steps
-from crypto.sha256 import hash_sha256_with_steps
+from crypto.sha1 import hash_sha1_with_steps, hash_sha1_bytes_with_steps
+from crypto.sha256 import hash_sha256_with_steps, hash_sha256_bytes_with_steps
 from crypto.bcrypt_hash import hash_password, verify_password
 from crypto.elgamal import key_gen as elgamal_keygen, encrypt as elgamal_encrypt, decrypt as elgamal_decrypt, PRESETS as ELG_PRESETS
-from crypto.ecc import key_gen as ecc_keygen, point_add, find_all_points, PRESETS as ECC_PRESETS
+from crypto.ecc import key_gen as ecc_keygen, point_add, find_all_points, ecc_encrypt, ecc_decrypt, PRESETS as ECC_PRESETS
 
 app = Flask(__name__)
 
@@ -31,6 +31,32 @@ def api_sha1():
 def api_sha256():
     msg = request.json.get('message', '')
     return jsonify(hash_sha256_with_steps(msg))
+
+@app.route('/api/sha1/file', methods=['POST'])
+def api_sha1_file():
+    if 'file' not in request.files:
+        return jsonify({'error': 'No file uploaded'}), 400
+    f = request.files['file']
+    if f.filename == '':
+        return jsonify({'error': 'No file selected'}), 400
+    data = f.read()
+    result = hash_sha1_bytes_with_steps(data)
+    result['filename'] = f.filename
+    result['filesize'] = len(data)
+    return jsonify(result)
+
+@app.route('/api/sha256/file', methods=['POST'])
+def api_sha256_file():
+    if 'file' not in request.files:
+        return jsonify({'error': 'No file uploaded'}), 400
+    f = request.files['file']
+    if f.filename == '':
+        return jsonify({'error': 'No file selected'}), 400
+    data = f.read()
+    result = hash_sha256_bytes_with_steps(data)
+    result['filename'] = f.filename
+    result['filesize'] = len(data)
+    return jsonify(result)
 
 # --- Bcrypt ---
 @app.route('/api/bcrypt/hash', methods=['POST'])
@@ -95,6 +121,31 @@ def api_ecc_add():
     if rx is None:
         return jsonify({'result': 'Point at Infinity (O)', 'x': None, 'y': None})
     return jsonify({'result': f'({rx}, {ry})', 'x': rx, 'y': ry})
+
+@app.route('/api/ecc/encrypt', methods=['POST'])
+def api_ecc_encrypt():
+    a = int(request.json.get('a', 2))
+    b = int(request.json.get('b', 3))
+    p = int(request.json.get('p', 97))
+    gx = int(request.json.get('gx', 3))
+    gy = int(request.json.get('gy', 6))
+    qx = int(request.json.get('qx', 0))
+    qy = int(request.json.get('qy', 0))
+    n = int(request.json.get('n', 100))
+    plaintext = request.json.get('plaintext', '')
+    return jsonify(ecc_encrypt(plaintext, a, b, p, gx, gy, qx, qy, n))
+
+@app.route('/api/ecc/decrypt', methods=['POST'])
+def api_ecc_decrypt():
+    a = int(request.json.get('a', 2))
+    b = int(request.json.get('b', 3))
+    p = int(request.json.get('p', 97))
+    gx = int(request.json.get('gx', 3))
+    gy = int(request.json.get('gy', 6))
+    d = int(request.json.get('d', 1))
+    n = int(request.json.get('n', 100))
+    ciphertext = request.json.get('ciphertext', [])
+    return jsonify(ecc_decrypt(ciphertext, a, b, p, gx, gy, d, n))
 
 if __name__ == '__main__':
     app.run(debug=True, port=5000)

@@ -72,6 +72,20 @@
                     <div class="card-title">Interactive Demo</div>
                     <div class="form-group"><label for="sha1-input">Input Message</label><textarea id="sha1-input" placeholder="Type a message...">Hello, World!</textarea></div>
                     <button class="btn btn-primary" id="sha1-btn">Compute SHA-1 Hash</button>
+                    <div class="divider-or"><span>OR</span></div>
+                    <div class="form-group">
+                        <label>Upload File</label>
+                        <div class="file-drop-zone" id="sha1-drop-zone">
+                            <input type="file" id="sha1-file-input" class="file-input-hidden">
+                            <div class="file-drop-content">
+                                <span class="file-icon">📁</span>
+                                <p>Drag & drop a file here or <span class="file-browse">browse</span></p>
+                                <p class="file-hint">Any file type supported</p>
+                            </div>
+                            <div class="file-selected" id="sha1-file-info" style="display:none"></div>
+                        </div>
+                        <button class="btn btn-secondary" id="sha1-file-btn" style="margin-top:8px" disabled>Hash File</button>
+                    </div>
                     <div class="form-group" style="margin-top:16px"><label>Hash Output (40 hex chars)</label><div class="output-display" id="sha1-output">—</div></div>
                 </div>
                 <div class="card"><div class="card-title">Algorithm Steps</div><div class="steps-container" id="sha1-steps"></div></div>
@@ -89,6 +103,20 @@
                     <div class="card-title">Interactive Demo</div>
                     <div class="form-group"><label for="sha256-input">Input Message</label><textarea id="sha256-input" placeholder="Type a message...">Hello, World!</textarea></div>
                     <button class="btn btn-primary" id="sha256-btn">Compute SHA-256 Hash</button>
+                    <div class="divider-or"><span>OR</span></div>
+                    <div class="form-group">
+                        <label>Upload File</label>
+                        <div class="file-drop-zone" id="sha256-drop-zone">
+                            <input type="file" id="sha256-file-input" class="file-input-hidden">
+                            <div class="file-drop-content">
+                                <span class="file-icon">📁</span>
+                                <p>Drag & drop a file here or <span class="file-browse">browse</span></p>
+                                <p class="file-hint">Any file type supported</p>
+                            </div>
+                            <div class="file-selected" id="sha256-file-info" style="display:none"></div>
+                        </div>
+                        <button class="btn btn-secondary" id="sha256-file-btn" style="margin-top:8px" disabled>Hash File</button>
+                    </div>
                     <div class="form-group" style="margin-top:16px"><label>Hash Output (64 hex chars)</label><div class="output-display" id="sha256-output">—</div></div>
                 </div>
                 <div class="card"><div class="card-title">Algorithm Steps</div><div class="steps-container" id="sha256-steps"></div></div>
@@ -193,6 +221,22 @@
                 </div>
                 <div class="two-col">
                     <div class="card">
+                        <div class="card-title">🔐 Encrypt Plaintext</div>
+                        <div class="form-group"><label for="ecc-enc-plaintext">Plaintext Message</label><textarea id="ecc-enc-plaintext" placeholder="Type a message to encrypt..." style="min-height:60px">Hello</textarea></div>
+                        <button class="btn btn-primary" id="ecc-encrypt-btn">Encrypt</button>
+                        <div class="form-group" style="margin-top:16px"><label>Ciphertext (point pairs)</label><div class="output-display" id="ecc-cipher-output" style="max-height:120px;overflow-y:auto">—</div></div>
+                        <div class="steps-container" id="ecc-encrypt-steps" style="margin-top:8px"></div>
+                    </div>
+                    <div class="card">
+                        <div class="card-title">🔓 Decrypt Ciphertext</div>
+                        <p style="font-size:0.8rem;color:var(--text-secondary);margin-bottom:12px">Uses the ciphertext from encryption and private key d to recover the original message.</p>
+                        <button class="btn btn-primary" id="ecc-decrypt-btn">Decrypt</button>
+                        <div class="form-group" style="margin-top:16px"><label>Decrypted Plaintext</label><div class="output-display" id="ecc-dec-output">—</div></div>
+                        <div class="steps-container" id="ecc-decrypt-steps" style="margin-top:8px"></div>
+                    </div>
+                </div>
+                <div class="two-col">
+                    <div class="card">
                         <div class="card-title">Point Addition (P + Q)</div>
                         <div class="two-col">
                             <div>
@@ -212,7 +256,7 @@
                         <canvas id="ecc-canvas" width="400" height="400"></canvas>
                     </div>
                 </div>
-                <div class="info-box"><strong>How it works:</strong> y²=x³+ax+b over F_p. Non-singular: 4a³+27b²≠0. Point addition via chord-and-tangent. Scalar multiplication via double-and-add. Private key d random; public key Q=d·G.</div>
+                <div class="info-box"><strong>How it works:</strong> y²=x³+ax+b over F_p. Non-singular: 4a³+27b²≠0. Point addition via chord-and-tangent. Scalar multiplication via double-and-add. Private key d random; public key Q=d·G. Encryption: each char m → M=m·G, ciphertext (k·G, M+k·Q). Decryption: M=C2−d·C1, recover m from lookup table.</div>
             </div>
         </main>
     </div>

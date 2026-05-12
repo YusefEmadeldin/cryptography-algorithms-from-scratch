@@ -37,7 +37,7 @@ def _rotl(x, n):
 
 def _string_to_bytes(s):
     """Convert a string to a list of bytes."""
-    return list(s.encode('latin-1'))
+    return list(s.encode('utf-8'))
 
 
 def _pad(byte_list):

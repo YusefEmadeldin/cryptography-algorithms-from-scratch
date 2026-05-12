@@ -64,6 +64,74 @@ document.getElementById('sha256-btn')?.addEventListener('click', async () => {
     renderSteps('sha256-steps', r.steps);
 });
 
+// --- File Upload Helpers ---
+function formatFileSize(bytes) {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / 1048576).toFixed(2) + ' MB';
+}
+
+function setupFileUpload(prefix, apiUrl, stepsId) {
+    const fileInput = document.getElementById(`${prefix}-file-input`);
+    const dropZone = document.getElementById(`${prefix}-drop-zone`);
+    const fileInfo = document.getElementById(`${prefix}-file-info`);
+    const fileBtn = document.getElementById(`${prefix}-file-btn`);
+    const dropContent = dropZone?.querySelector('.file-drop-content');
+
+    if (!fileInput || !dropZone || !fileBtn) return;
+
+    // Drag and drop events
+    ['dragenter', 'dragover'].forEach(evt => {
+        dropZone.addEventListener(evt, e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+    });
+    ['dragleave', 'drop'].forEach(evt => {
+        dropZone.addEventListener(evt, e => { e.preventDefault(); dropZone.classList.remove('drag-over'); });
+    });
+    dropZone.addEventListener('drop', e => {
+        if (e.dataTransfer.files.length) {
+            fileInput.files = e.dataTransfer.files;
+            fileInput.dispatchEvent(new Event('change'));
+        }
+    });
+
+    // File selected
+    fileInput.addEventListener('change', () => {
+        const file = fileInput.files[0];
+        if (!file) { fileBtn.disabled = true; fileInfo.style.display = 'none'; dropContent.style.display = ''; return; }
+        fileInfo.textContent = `📄 ${file.name} (${formatFileSize(file.size)})`;
+        fileInfo.style.display = 'block';
+        dropContent.style.display = 'none';
+        fileBtn.disabled = false;
+    });
+
+    // Upload and hash
+    fileBtn.addEventListener('click', async () => {
+        const file = fileInput.files[0];
+        if (!file) return;
+        fileBtn.disabled = true;
+        fileBtn.textContent = 'Hashing...';
+        try {
+            const formData = new FormData();
+            formData.append('file', file);
+            const res = await fetch(apiUrl, { method: 'POST', body: formData });
+            const r = await res.json();
+            if (r.error) {
+                setOutput(`${prefix}-output`, 'Error: ' + r.error, true);
+            } else {
+                setOutput(`${prefix}-output`, r.hash);
+                renderSteps(stepsId, r.steps);
+            }
+        } catch (err) {
+            setOutput(`${prefix}-output`, 'Error: ' + err.message, true);
+        }
+        fileBtn.disabled = false;
+        fileBtn.textContent = 'Hash File';
+    });
+}
+
+setupFileUpload('sha1', '/api/sha1/file', 'sha1-steps');
+setupFileUpload('sha256', '/api/sha256/file', 'sha256-steps');
+
 // --- Bcrypt ---
 const bcryptCost = document.getElementById('bcrypt-cost');
 const bcryptCostDisplay = document.getElementById('bcrypt-cost-display');
@@ -185,6 +253,68 @@ document.getElementById('ecc-add-btn')?.addEventListener('click', async () => {
     const p2y = parseInt(document.getElementById('ecc-p2y').value);
     const r = await apiCall('/api/ecc/add', {a, p, p1x, p1y, p2x, p2y});
     setOutput('ecc-add-output', `(${p1x},${p1y}) + (${p2x},${p2y}) = ${r.result}`);
+});
+
+// --- ECC Encrypt ---
+let eccCiphertext = null;
+
+document.getElementById('ecc-encrypt-btn')?.addEventListener('click', async () => {
+    if (!eccData) { alert('Generate keys first!'); return; }
+    const plaintext = document.getElementById('ecc-enc-plaintext').value;
+    if (!plaintext) { alert('Enter plaintext to encrypt'); return; }
+
+    const btn = document.getElementById('ecc-encrypt-btn');
+    btn.disabled = true; btn.textContent = 'Encrypting...';
+
+    const r = await apiCall('/api/ecc/encrypt', {
+        a: eccData.a, b: eccData.b, p: eccData.p,
+        gx: eccData.gx, gy: eccData.gy,
+        qx: eccData.public_key.x, qy: eccData.public_key.y,
+        n: eccData.order,
+        plaintext
+    });
+
+    btn.disabled = false; btn.textContent = 'Encrypt';
+
+    if (r.error) {
+        setOutput('ecc-cipher-output', 'Error: ' + r.error, true);
+        return;
+    }
+
+    eccCiphertext = r.ciphertext;
+    const display = r.ciphertext.map((ct, i) =>
+        `[${i}] C1=(${ct.C1.x},${ct.C1.y}) C2=(${ct.C2.x},${ct.C2.y})`
+    ).join('\n');
+    document.getElementById('ecc-cipher-output').textContent = display;
+    document.getElementById('ecc-cipher-output').classList.add('has-value');
+    renderSteps('ecc-encrypt-steps', r.steps);
+});
+
+// --- ECC Decrypt ---
+document.getElementById('ecc-decrypt-btn')?.addEventListener('click', async () => {
+    if (!eccData) { alert('Generate keys first!'); return; }
+    if (!eccCiphertext) { alert('Encrypt a message first!'); return; }
+
+    const btn = document.getElementById('ecc-decrypt-btn');
+    btn.disabled = true; btn.textContent = 'Decrypting...';
+
+    const r = await apiCall('/api/ecc/decrypt', {
+        a: eccData.a, b: eccData.b, p: eccData.p,
+        gx: eccData.gx, gy: eccData.gy,
+        d: eccData.private_key,
+        n: eccData.order,
+        ciphertext: eccCiphertext
+    });
+
+    btn.disabled = false; btn.textContent = 'Decrypt';
+
+    if (r.error) {
+        setOutput('ecc-dec-output', 'Error: ' + r.error, true);
+        return;
+    }
+
+    setOutput('ecc-dec-output', r.plaintext);
+    renderSteps('ecc-decrypt-steps', r.steps);
 });
 
 // --- Canvas Drawing ---

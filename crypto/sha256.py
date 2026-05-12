@@ -61,7 +61,7 @@ def _lsigma1(x):
 
 
 def _string_to_bytes(s):
-    return list(s.encode('latin-1'))
+    return list(s.encode('utf-8'))
 
 
 def _pad(byte_list):
@@ -139,6 +139,71 @@ def hash_sha256_with_steps(message):
         H[7] = _mask(H[7] + h)
 
         steps.append(f"Block {block + 1}/{num_blocks}: 64 rounds with Σ0, Σ1, Ch, Maj functions")
+
+    def to_hex(n):
+        return format(n, '08x')
+
+    hash_value = ''.join(to_hex(v) for v in H)
+
+    steps.append(f"Final hash: {hash_value}")
+    return {'hash': hash_value, 'steps': steps}
+
+
+def hash_sha256_bytes_with_steps(byte_data):
+    """Compute SHA-256 hash from raw bytes (for file uploads)."""
+    msg_bytes = _pad(list(byte_data))
+    steps = []
+
+    H = [
+        0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a,
+        0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19
+    ]
+
+    steps.append(f"Initialize H0-H7 from fractional parts of √(first 8 primes)")
+    steps.append(f"File size: {len(byte_data)} bytes")
+    steps.append(f"Padded to {len(msg_bytes) * 8} bits ({len(msg_bytes) // 64} block(s))")
+
+    num_blocks = len(msg_bytes) // 64
+
+    for block in range(num_blocks):
+        offset = block * 64
+        W = [0] * 64
+
+        for i in range(16):
+            W[i] = _mask(
+                (msg_bytes[offset + i * 4] << 24) |
+                (msg_bytes[offset + i * 4 + 1] << 16) |
+                (msg_bytes[offset + i * 4 + 2] << 8) |
+                msg_bytes[offset + i * 4 + 3]
+            )
+
+        for i in range(16, 64):
+            W[i] = _mask(_lsigma1(W[i - 2]) + W[i - 7] + _lsigma0(W[i - 15]) + W[i - 16])
+
+        a, b, c, d, e, f, g, h = H
+
+        for i in range(64):
+            T1 = _mask(h + _sigma1(e) + _ch(e, f, g) + K[i] + W[i])
+            T2 = _mask(_sigma0(a) + _maj(a, b, c))
+            h = g
+            g = f
+            f = e
+            e = _mask(d + T1)
+            d = c
+            c = b
+            b = a
+            a = _mask(T1 + T2)
+
+        H[0] = _mask(H[0] + a)
+        H[1] = _mask(H[1] + b)
+        H[2] = _mask(H[2] + c)
+        H[3] = _mask(H[3] + d)
+        H[4] = _mask(H[4] + e)
+        H[5] = _mask(H[5] + f)
+        H[6] = _mask(H[6] + g)
+        H[7] = _mask(H[7] + h)
+
+    steps.append(f"Processed {num_blocks} block(s) — 64 rounds each")
 
     def to_hex(n):
         return format(n, '08x')
