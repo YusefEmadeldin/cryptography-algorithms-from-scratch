@@ -12,13 +12,14 @@ An interactive web application for exploring and visualizing cryptographic algor
 | **Hashing** | SHA-1 | 160-bit hash (FIPS 180-4) |
 | **Hashing** | SHA-256 | 256-bit hash (FIPS 180-4) |
 | **Key Derivation** | Bcrypt | Adaptive-cost password hashing based on Blowfish |
-| **Public-Key Encryption** | ElGamal | Encryption scheme based on the Discrete Logarithm Problem |
-| **Public-Key Cryptography** | ECC | Elliptic Curve key generation, point addition & scalar multiplication |
+| **Public-Key Encryption** | ElGamal | String-based encryption, decryption, and SHA-256 digital signatures |
+| **Public-Key Cryptography** | ECC | Elliptic Curve keygen, text encryption, ECDSA signatures, supporting massive curves like secp256r1 |
 
 -  **Step-by-step visualization** — see intermediate values, round details, and final output for every operation.
 -  **Interactive UI** — enter inputs and get instant results through a sleek dark-mode interface.
--  **Presets** — pre-configured parameter sets for ElGamal and ECC to get started quickly.
+-  **Presets** — pre-configured parameter sets for ElGamal and ECC (including NIST P-256 and Bitcoin secp256k1) to get started quickly.
 -  **Bcrypt verify** — hash a password *and* verify it against an existing hash.
+-  **Digital Signatures** — Sign and verify messages securely using ElGamal and ECDSA.
 
 ---
 
@@ -109,16 +110,21 @@ All endpoints accept **POST** requests with JSON bodies and return JSON response
 
 | Endpoint | Body | Returns |
 |---|---|---|
-| `/api/elgamal/keygen` | `{ "q": 23, "alpha": 5 }` | Public/private keys + steps |
-| `/api/elgamal/encrypt` | `{ "plaintext": 15, "q": 23, "alpha": 5, "y": ... }` | `{ "C1": ..., "C2": ..., "steps": [...] }` |
-| `/api/elgamal/decrypt` | `{ "C1": ..., "C2": ..., "x": ..., "q": 23 }` | `{ "plaintext": ..., "steps": [...] }` |
+| `/api/elgamal/keygen` | `{ "q": 479, "alpha": 13 }` | Public/private keys + steps |
+| `/api/elgamal/encrypt` | `{ "plaintext": "Hello", "q": 479, "alpha": 13, "y": ... }` | `{ "ciphertext": [...], "steps": [...] }` |
+| `/api/elgamal/decrypt` | `{ "ciphertext": [...], "x": ..., "q": 479 }` | `{ "plaintext": "Hello", "steps": [...] }` |
+| `/api/elgamal/sign` | `{ "message": "Hello", "q": 479, "alpha": 13, "x": ... }` | `{ "S1": ..., "S2": ..., "steps": [...] }` |
+| `/api/elgamal/verify` | `{ "message": "Hello", "q": 479, "alpha": 13, "y": ..., "S1": ..., "S2": ... }` | `{ "valid": true/false, "steps": [...] }` |
 
 ### ECC
 
 | Endpoint | Body | Returns |
 |---|---|---|
-| `/api/ecc/keygen` | `{ "a": 2, "b": 3, "p": 97, "gx": 3, "gy": 6 }` | Keys, curve points, order + steps |
-| `/api/ecc/add` | `{ "a": 2, "p": 97, "p1x": ..., "p1y": ..., "p2x": ..., "p2y": ... }` | Result point |
+| `/api/ecc/keygen` | `{ "a": "...", "b": "...", "p": "...", "gx": "...", "gy": "...", "n": "..." }` | Keys, curve points, order + steps |
+| `/api/ecc/encrypt` | `{ "plaintext": "Hello", "a": "...", "b": "...", "p": "...", "qx": "...", "qy": "..." }` | `{ "ciphertext": [...], "steps": [...] }` |
+| `/api/ecc/decrypt` | `{ "ciphertext": [...], "a": "...", "p": "...", "d": "..." }` | `{ "plaintext": "Hello", "steps": [...] }` |
+| `/api/ecc/sign` | `{ "message": "Hello", "d": "...", "n": "..." }` | `{ "r": "...", "s": "...", "steps": [...] }` |
+| `/api/ecc/verify` | `{ "message": "Hello", "r": "...", "s": "...", "qx": "...", "qy": "..." }` | `{ "valid": true/false, "steps": [...] }` |
 
 ---
 
@@ -137,10 +143,10 @@ Eight 32-bit registers initialized from the square roots of the first 8 primes. 
 Derives a Blowfish key schedule using the password and a 128-bit salt, then iterates `2^cost` rounds of key expansion (EksBlowfish). Encrypts the magic string `"OrpheanBeholderScryDoubt"` 64 times to produce the final hash.
 
 ### ElGamal
-Generates keys over ℤ*_q using a prime `q` and primitive root `α`. Encrypts by choosing a random `k` and computing `(C1, C2) = (αᵏ mod q, M·yᵏ mod q)`. Decrypts via modular inverse of `C1ˣ`.
+Generates keys over ℤ*_q using a prime `q` and primitive root `α`. Encrypts text character-by-character by choosing a random `k` and computing `(C1, C2) = (αᵏ mod q, M·yᵏ mod q)`. Decrypts via modular inverse of `C1ˣ`. Also supports digital signatures by hashing the message with SHA-256 and generating a pair `(S1, S2)` verified via `y^S1 · S1^S2 ≡ α^H(m) mod q`.
 
 ### ECC (Elliptic Curve Cryptography)
-Operates on the curve `y² = x³ + ax + b (mod p)`. Supports point addition, doubling, and scalar multiplication (double-and-add). Key generation picks a random scalar `d` and computes the public key `Q = d·G`.
+Operates on the curve `y² = x³ + ax + b (mod p)`. Supports standard curves (like `secp256r1` and `secp256k1`) using massive string-based integers. Encrypts text character-by-character into ElGamal-style point pairs `(C1, C2) = (k·G, M + k·Q)`. Features ECDSA signing and verification, deriving `(r,s)` using a random `k` and SHA-256 hash. Dynamically switches to abstract continuous curve visualizations for 256-bit industrial curves.
 
 ---
 
