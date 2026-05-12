@@ -7,7 +7,7 @@ from crypto.md5 import hash_md5_with_steps, hash_md5_bytes_with_steps
 from crypto.sha1 import hash_sha1_with_steps, hash_sha1_bytes_with_steps
 from crypto.sha256 import hash_sha256_with_steps, hash_sha256_bytes_with_steps
 from crypto.bcrypt_hash import hash_password, verify_password
-from crypto.elgamal import key_gen as elgamal_keygen, encrypt as elgamal_encrypt, decrypt as elgamal_decrypt, PRESETS as ELG_PRESETS
+from crypto.elgamal import key_gen as elgamal_keygen, encrypt as elgamal_encrypt, decrypt as elgamal_decrypt, sign as elgamal_sign, verify_signature as elgamal_verify, PRESETS as ELG_PRESETS
 from crypto.ecc import key_gen as ecc_keygen, point_add, find_all_points, ecc_encrypt, ecc_decrypt, PRESETS as ECC_PRESETS
 
 app = Flask(__name__)
@@ -93,7 +93,7 @@ def api_elgamal_keygen():
 
 @app.route('/api/elgamal/encrypt', methods=['POST'])
 def api_elgamal_encrypt():
-    M = int(request.json.get('plaintext', 0))
+    M = request.json.get('plaintext', '')
     q = int(request.json.get('q', 23))
     alpha = int(request.json.get('alpha', 5))
     y = int(request.json.get('y', 1))
@@ -101,11 +101,29 @@ def api_elgamal_encrypt():
 
 @app.route('/api/elgamal/decrypt', methods=['POST'])
 def api_elgamal_decrypt():
-    C1 = int(request.json.get('C1', 0))
-    C2 = int(request.json.get('C2', 0))
+    ciphertext = request.json.get('ciphertext', [])
     x = int(request.json.get('x', 0))
     q = int(request.json.get('q', 23))
-    return jsonify(elgamal_decrypt(C1, C2, x, q))
+    return jsonify(elgamal_decrypt(ciphertext, x, q))
+
+@app.route('/api/elgamal/sign', methods=['POST'])
+def api_elgamal_sign():
+    M = request.json.get('message', '')
+    q = int(request.json.get('q', 23))
+    alpha = int(request.json.get('alpha', 5))
+    x = int(request.json.get('x', 0))
+    return jsonify(elgamal_sign(M, q, alpha, x))
+
+@app.route('/api/elgamal/verify', methods=['POST'])
+def api_elgamal_verify():
+    M = request.json.get('message', '')
+    S1 = int(request.json.get('S1', 0))
+    S2 = int(request.json.get('S2', 0))
+    q = int(request.json.get('q', 23))
+    alpha = int(request.json.get('alpha', 5))
+    y = int(request.json.get('y', 1))
+    return jsonify(elgamal_verify(M, S1, S2, q, alpha, y))
+
 
 # --- ECC ---
 @app.route('/api/ecc/keygen', methods=['POST'])

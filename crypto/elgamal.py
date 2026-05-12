@@ -55,11 +55,11 @@ def _is_primitive_root(g, p):
     return all(_mod_pow(g, phi // f, p) != 1 for f in factors)
 
 PRESETS = [
+    {'q': 479, 'alpha': 13, 'label': 'q=479, α=13 (Text ready)'},
     {'q': 23, 'alpha': 5, 'label': 'q=23, α=5'},
     {'q': 47, 'alpha': 5, 'label': 'q=47, α=5'},
     {'q': 71, 'alpha': 7, 'label': 'q=71, α=7'},
     {'q': 167, 'alpha': 5, 'label': 'q=167, α=5'},
-    {'q': 479, 'alpha': 13, 'label': 'q=479, α=13'},
 ]
 
 def key_gen(q, alpha):
@@ -83,35 +83,110 @@ def key_gen(q, alpha):
         'steps': steps
     }
 
-def encrypt(plaintext, q, alpha, y):
+import hashlib
+
+def encrypt(plaintext_str, q, alpha, y):
     steps = []
-    if plaintext < 0 or plaintext >= q:
-        return {'error': f'Plaintext must be 0 ≤ M < {q}'}
+    if q <= 255:
+        return {'error': f'Prime q={q} is too small to encrypt ASCII characters. Please use a preset with q > 255.'}
+
+    ciphertext = []
+    steps.append(f'Plaintext: "{plaintext_str}" ({len(plaintext_str)} chars)')
+    
+    for i, ch in enumerate(plaintext_str):
+        M = ord(ch)
+        if M >= q:
+            return {'error': f'Character "{ch}" (ASCII {M}) is >= q ({q})'}
+        
+        k = random.randint(2, q - 2)
+        while _gcd(k, q - 1) != 1:
+            k = random.randint(2, q - 2)
+
+        C1 = _mod_pow(alpha, k, q)
+        C2 = (M * _mod_pow(y, k, q)) % q
+        
+        ciphertext.append({'C1': C1, 'C2': C2})
+        if i < 3:
+            steps.append(f'Char "{ch}" (M={M}): k={k}, C1={C1}, C2={C2}')
+
+    if len(plaintext_str) > 3:
+        steps.append(f'... ({len(plaintext_str) - 3} more characters encrypted)')
+        
+    return {'ciphertext': ciphertext, 'steps': steps}
+
+def decrypt(ciphertext, x, q):
+    steps = []
+    plaintext = ""
+
+    if not isinstance(ciphertext, list):
+        return {'error': 'Ciphertext must be a list of {C1, C2} pairs'}
+
+    steps.append(f'Decrypting {len(ciphertext)} pair(s)')
+    for i, pair in enumerate(ciphertext):
+        C1 = pair.get('C1', 0)
+        C2 = pair.get('C2', 0)
+        s = _mod_pow(C1, x, q)
+        s_inv = _mod_inverse(s, q)
+        M = (C2 * s_inv) % q
+        
+        # handle M safely
+        ch = chr(M) if 0 <= M <= 1114111 else '?'
+        plaintext += ch
+        
+        if i < 3:
+            steps.append(f'Pair {i+1}: C1={C1}, C2={C2} -> s={s}, s⁻¹={s_inv}, M={M} ("{ch}")')
+
+    if len(ciphertext) > 3:
+        steps.append(f'... ({len(ciphertext) - 3} more pairs decrypted)')
+
+    return {'plaintext': plaintext, 'steps': steps}
+
+def sign(message_str, q, alpha, x):
+    steps = []
+    M = int(hashlib.sha256(message_str.encode('utf-8')).hexdigest(), 16) % (q - 1)
 
     k = random.randint(2, q - 2)
     while _gcd(k, q - 1) != 1:
         k = random.randint(2, q - 2)
 
-    C1 = _mod_pow(alpha, k, q)
-    C2 = (plaintext * _mod_pow(y, k, q)) % q
+    k_inv = _mod_inverse(k, q - 1)
+    
+    S1 = _mod_pow(alpha, k, q)
+    S2 = ((M - x * S1) * k_inv) % (q - 1)
 
-    steps.append(f'Plaintext M = {plaintext}')
+    steps.append(f'Message: "{message_str}"')
+    steps.append(f'Hashed Message M = SHA256(msg) mod (q-1) = {M}')
     steps.append(f'Choose random k = {k} (gcd({k}, {q-1}) = 1)')
-    steps.append(f'C1 = α^k mod q = {alpha}^{k} mod {q} = {C1}')
-    steps.append(f'C2 = M · y^k mod q = {plaintext} · {y}^{k} mod {q} = {C2}')
-    steps.append(f'Ciphertext = ({C1}, {C2})')
+    steps.append(f'Compute k⁻¹ mod (q-1) = {k_inv}')
+    steps.append(f'S1 = α^k mod q = {alpha}^{k} mod {q} = {S1}')
+    steps.append(f'S2 = (M - x·S1)·k⁻¹ mod (q-1) = ({M} - {x}·{S1})·{k_inv} mod {q-1} = {S2}')
+    steps.append(f'Signature = ({S1}, {S2})')
 
-    return {'C1': C1, 'C2': C2, 'k': k, 'steps': steps}
+    return {'S1': S1, 'S2': S2, 'k': k, 'steps': steps}
 
-def decrypt(C1, C2, x, q):
+def verify_signature(message_str, S1, S2, q, alpha, y):
     steps = []
-    s = _mod_pow(C1, x, q)
-    s_inv = _mod_inverse(s, q)
-    M = (C2 * s_inv) % q
+    if not (0 < S1 < q):
+        return {'valid': False, 'error': f'S1 must be 0 < S1 < {q}'}
+    if not (0 <= S2 < q - 1):
+        return {'valid': False, 'error': f'S2 must be 0 ≤ S2 < {q-1}'}
 
-    steps.append(f'Ciphertext (C1, C2) = ({C1}, {C2})')
-    steps.append(f'Compute s = C1^x mod q = {C1}^{x} mod {q} = {s}')
-    steps.append(f'Compute s⁻¹ mod q = {s_inv}')
-    steps.append(f'M = C2 · s⁻¹ mod q = {C2} · {s_inv} mod {q} = {M}')
+    M = int(hashlib.sha256(message_str.encode('utf-8')).hexdigest(), 16) % (q - 1)
 
-    return {'plaintext': M, 'steps': steps}
+    v1 = (_mod_pow(y, S1, q) * _mod_pow(S1, S2, q)) % q
+    v2 = _mod_pow(alpha, M, q)
+
+    valid = (v1 == v2)
+
+    steps.append(f'Message: "{message_str}"')
+    steps.append(f'Hashed Message M = SHA256(msg) mod (q-1) = {M}')
+    steps.append(f'Signature (S1, S2) = ({S1}, {S2})')
+    steps.append(f'Compute V1 = y^S1 · S1^S2 mod q = {y}^{S1} · {S1}^{S2} mod {q} = {v1}')
+    steps.append(f'Compute V2 = α^M mod q = {alpha}^{M} mod {q} = {v2}')
+    
+    if valid:
+        steps.append(f'V1 == V2 ({v1} == {v2}). Verification SUCCESS.')
+    else:
+        steps.append(f'V1 != V2 ({v1} != {v2}). Verification FAILED.')
+
+    return {'valid': valid, 'steps': steps}

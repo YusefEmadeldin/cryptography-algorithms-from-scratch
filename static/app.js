@@ -188,27 +188,61 @@ document.getElementById('elgamal-keygen-btn')?.addEventListener('click', async (
     document.getElementById('elgamal-plaintext').placeholder = `0 to ${q - 1}`;
 });
 
+let elgCiphertext = null;
+
 document.getElementById('elgamal-encrypt-btn')?.addEventListener('click', async () => {
     if (!elgKeys) { alert('Generate keys first!'); return; }
-    const M = parseInt(document.getElementById('elgamal-plaintext').value);
-    if (isNaN(M)) { alert('Enter a plaintext number'); return; }
+    const M = document.getElementById('elgamal-plaintext').value;
+    if (!M) { alert('Enter a plaintext message'); return; }
     const pk = elgKeys.public_key;
     const r = await apiCall('/api/elgamal/encrypt', {plaintext: M, q: pk.q, alpha: pk.alpha, y: pk.y});
     if (r.error) { setOutput('elgamal-cipher-output', 'Error: ' + r.error, true); return; }
-    setOutput('elgamal-cipher-output', `C1 = ${r.C1}, C2 = ${r.C2}`);
-    document.getElementById('elgamal-dec-c1').value = r.C1;
-    document.getElementById('elgamal-dec-c2').value = r.C2;
+    
+    elgCiphertext = r.ciphertext;
+    const display = r.ciphertext.map((ct, i) => `[${i}] C1=${ct.C1}, C2=${ct.C2}`).join('\n');
+    document.getElementById('elgamal-cipher-output').textContent = display;
+    document.getElementById('elgamal-cipher-output').classList.add('has-value');
     renderSteps('elgamal-encrypt-steps', r.steps);
 });
 
 document.getElementById('elgamal-decrypt-btn')?.addEventListener('click', async () => {
     if (!elgKeys) { alert('Generate keys first!'); return; }
-    const C1 = parseInt(document.getElementById('elgamal-dec-c1').value);
-    const C2 = parseInt(document.getElementById('elgamal-dec-c2').value);
-    if (isNaN(C1) || isNaN(C2)) { alert('Enter C1 and C2'); return; }
-    const r = await apiCall('/api/elgamal/decrypt', {C1, C2, x: elgKeys.private_key.x, q: elgKeys.public_key.q});
-    setOutput('elgamal-dec-output', `M = ${r.plaintext}`);
+    if (!elgCiphertext) { alert('Encrypt a message first!'); return; }
+    const r = await apiCall('/api/elgamal/decrypt', {ciphertext: elgCiphertext, x: elgKeys.private_key.x, q: elgKeys.public_key.q});
+    if (r.error) { setOutput('elgamal-dec-output', 'Error: ' + r.error, true); return; }
+    setOutput('elgamal-dec-output', r.plaintext);
     renderSteps('elgamal-decrypt-steps', r.steps);
+});
+
+document.getElementById('elgamal-sign-btn')?.addEventListener('click', async () => {
+    if (!elgKeys) { alert('Generate keys first!'); return; }
+    const M = document.getElementById('elgamal-sign-message').value;
+    if (!M) { alert('Enter a message to sign'); return; }
+    const r = await apiCall('/api/elgamal/sign', {message: M, q: elgKeys.public_key.q, alpha: elgKeys.public_key.alpha, x: elgKeys.private_key.x});
+    if (r.error) { setOutput('elgamal-sign-output', 'Error: ' + r.error, true); return; }
+    setOutput('elgamal-sign-output', `S1 = ${r.S1}, S2 = ${r.S2}`);
+    document.getElementById('elgamal-ver-s1').value = r.S1;
+    document.getElementById('elgamal-ver-s2').value = r.S2;
+    document.getElementById('elgamal-ver-message').value = M;
+    renderSteps('elgamal-sign-steps', r.steps);
+});
+
+document.getElementById('elgamal-verify-btn')?.addEventListener('click', async () => {
+    if (!elgKeys) { alert('Generate keys first!'); return; }
+    const M = document.getElementById('elgamal-ver-message').value;
+    const S1 = parseInt(document.getElementById('elgamal-ver-s1').value);
+    const S2 = parseInt(document.getElementById('elgamal-ver-s2').value);
+    if (!M || isNaN(S1) || isNaN(S2)) { alert('Enter Message, S1 and S2'); return; }
+    const r = await apiCall('/api/elgamal/verify', {message: M, S1, S2, q: elgKeys.public_key.q, alpha: elgKeys.public_key.alpha, y: elgKeys.public_key.y});
+    if (r.error) { setOutput('elgamal-ver-output', 'Error: ' + r.error, true); return; }
+    const out = document.getElementById('elgamal-ver-output');
+    if (r.valid) {
+        out.innerHTML = '<span class="verify-match" style="color:var(--success);font-weight:600">✓ Verification SUCCESS</span>';
+    } else {
+        out.innerHTML = '<span class="verify-nomatch" style="color:var(--danger);font-weight:600">✗ Verification FAILED</span>';
+    }
+    out.classList.add('has-value');
+    renderSteps('elgamal-verify-steps', r.steps);
 });
 
 // --- ECC ---
