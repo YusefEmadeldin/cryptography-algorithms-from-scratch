@@ -127,3 +127,75 @@ def hash_md5_with_steps(message):
 
     steps.append(f"Final hash: {hash_value}")
     return {'hash': hash_value, 'steps': steps}
+
+
+def hash_md5_bytes_with_steps(byte_data):
+    """Compute MD5 hash from raw bytes (for file uploads)."""
+    msg_bytes = _pad(list(byte_data))
+    steps = []
+
+    a0 = 0x67452301
+    b0 = 0xEFCDAB89
+    c0 = 0x98BADCFE
+    d0 = 0x10325476
+
+    steps.append(f"Initialize MD buffer: A={a0:#010x}, B={b0:#010x}, C={c0:#010x}, D={d0:#010x}")
+    steps.append(f"File size: {len(byte_data)} bytes")
+    steps.append(f"Message padded to {len(msg_bytes) * 8} bits ({len(msg_bytes) // 64} block(s))")
+
+    num_blocks = len(msg_bytes) // 64
+
+    for block in range(num_blocks):
+        offset = block * 64
+        M = [0] * 16
+        for i in range(16):
+            M[i] = (msg_bytes[offset + i * 4] |
+                     (msg_bytes[offset + i * 4 + 1] << 8) |
+                     (msg_bytes[offset + i * 4 + 2] << 16) |
+                     (msg_bytes[offset + i * 4 + 3] << 24))
+            M[i] = _mask(M[i])
+
+        A, B, C, D = a0, b0, c0, d0
+
+        for i in range(64):
+            if i < 16:
+                F = (B & C) | ((~B) & D)
+                g = i
+                round_name = 'F'
+            elif i < 32:
+                F = (D & B) | ((~D) & C)
+                g = (5 * i + 1) % 16
+                round_name = 'G'
+            elif i < 48:
+                F = B ^ C ^ D
+                g = (3 * i + 5) % 16
+                round_name = 'H'
+            else:
+                F = C ^ (B | (~D))
+                g = (7 * i) % 16
+                round_name = 'I'
+            F = _mask(F)
+
+            temp = D
+            D = C
+            C = B
+            B = _mask(B + _rotl(_mask(A + F + T[i] + M[g]), S[i]))
+            A = temp
+
+        a0 = _mask(a0 + A)
+        b0 = _mask(b0 + B)
+        c0 = _mask(c0 + C)
+        d0 = _mask(d0 + D)
+
+    steps.append(f"Processed {num_blocks} block(s) — 64 operations each")
+
+    def to_le_hex(n):
+        h = ''
+        for i in range(4):
+            h += format((n >> (i * 8)) & 0xFF, '02x')
+        return h
+
+    hash_value = to_le_hex(a0) + to_le_hex(b0) + to_le_hex(c0) + to_le_hex(d0)
+
+    steps.append(f"Final hash: {hash_value}")
+    return {'hash': hash_value, 'steps': steps}

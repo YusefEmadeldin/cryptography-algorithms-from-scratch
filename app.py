@@ -3,7 +3,7 @@ CryptoLab — Flask Web Application
 Interactive implementations of MD5, SHA-1, SHA-256, Bcrypt, ElGamal, and ECC.
 """
 from flask import Flask, render_template, request, jsonify
-from crypto.md5 import hash_md5_with_steps
+from crypto.md5 import hash_md5_with_steps, hash_md5_bytes_with_steps
 from crypto.sha1 import hash_sha1_with_steps, hash_sha1_bytes_with_steps
 from crypto.sha256 import hash_sha256_with_steps, hash_sha256_bytes_with_steps
 from crypto.bcrypt_hash import hash_password, verify_password
@@ -21,6 +21,19 @@ def index():
 def api_md5():
     msg = request.json.get('message', '')
     return jsonify(hash_md5_with_steps(msg))
+
+@app.route('/api/md5/file', methods=['POST'])
+def api_md5_file():
+    if 'file' not in request.files:
+        return jsonify({'error': 'No file uploaded'}), 400
+    f = request.files['file']
+    if f.filename == '':
+        return jsonify({'error': 'No file selected'}), 400
+    data = f.read()
+    result = hash_md5_bytes_with_steps(data)
+    result['filename'] = f.filename
+    result['filesize'] = len(data)
+    return jsonify(result)
 
 @app.route('/api/sha1', methods=['POST'])
 def api_sha1():

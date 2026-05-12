@@ -129,6 +129,7 @@ function setupFileUpload(prefix, apiUrl, stepsId) {
     });
 }
 
+setupFileUpload('md5', '/api/md5/file', 'md5-steps');
 setupFileUpload('sha1', '/api/sha1/file', 'sha1-steps');
 setupFileUpload('sha256', '/api/sha256/file', 'sha256-steps');
 
